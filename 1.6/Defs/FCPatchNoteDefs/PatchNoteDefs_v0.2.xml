@@ -257,4 +257,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_2_18</defName>
+		<label>Auto-Max Allocation Fix</label>
+		<description>Fixes an issue where auto-max allocation sometimes wouldn&apos;t properly automatically set itself to max.</description>
+		<releaseDate>2026-04-26</releaseDate>
+		<patchNoteType>Patch</patchNoteType>
+		<patchNoteLines>
+		<li>Add SyncAllAutoMaxAllocations calls to settlement/building lifecycle events to force a refresh more frequently</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

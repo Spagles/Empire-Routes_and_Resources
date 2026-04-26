@@ -1058,7 +1058,9 @@ namespace FactionColonies.SupplyChain
         public void OnSettlementUpgraded(WorldSettlementFC settlement, int oldLevel, int newLevel)
         {
             DirtyFlowCache();
-            GetComp(settlement)?.RebuildNeedStates();
+            WorldObjectComp_SupplyChain comp = GetComp(settlement);
+            comp?.RebuildNeedStates();
+            comp?.SyncAllAutoMaxAllocations();
         }
 
         public void OnSettlementTypeChanged(WorldSettlementFC settlement, WorldSettlementDef oldDef, WorldSettlementDef newDef)
@@ -1066,6 +1068,7 @@ namespace FactionColonies.SupplyChain
             capsAndStockpilesDirty = true;
             DirtyFlowCache();
             resourceColumnsDirty = true;
+            GetComp(settlement)?.SyncAllAutoMaxAllocations();
         }
 
         public void OnBuildingConstructed(WorldSettlementFC settlement, BuildingFCDef building, int slot)
@@ -1076,6 +1079,7 @@ namespace FactionColonies.SupplyChain
             WorldObjectComp_SupplyChain comp = GetComp(settlement);
             comp?.DirtyLocalCaps();
             comp?.RebuildNeedStates();
+            comp?.SyncAllAutoMaxAllocations();
         }
 
         public void OnBuildingDeconstructed(WorldSettlementFC settlement, BuildingFCDef building, int slot)
@@ -1086,6 +1090,7 @@ namespace FactionColonies.SupplyChain
             WorldObjectComp_SupplyChain comp = GetComp(settlement);
             comp?.DirtyLocalCaps();
             comp?.RebuildNeedStates();
+            comp?.SyncAllAutoMaxAllocations();
         }
 
         public void OnSquadDeployed(WorldSettlementFC settlement, MilitaryJobDef job, bool isExtraSquad) { }
@@ -1093,7 +1098,14 @@ namespace FactionColonies.SupplyChain
         public void OnBattleResolved(WorldSettlementFC settlement, MilitaryJobDef job, bool victory, BattleResult result) { }
         public void OnMercenaryDeath(MercenaryDeathEvent evt) { }
 
-        public void OnResearchCompleted(ResearchProjectDef project) { }
+        public void OnResearchCompleted(ResearchProjectDef project)
+        {
+            FactionFC faction = FactionCache.FactionComp;
+            if (faction is null) return;
+            DirtyFlowCache();
+            foreach (WorldSettlementFC settlement in faction.settlements)
+                GetComp(settlement)?.SyncAllAutoMaxAllocations();
+        }
 
         private void InvalidateAllRoutes()
         {
