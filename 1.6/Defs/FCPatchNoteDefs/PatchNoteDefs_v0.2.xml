@@ -271,4 +271,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_2_19</defName>
+		<label>Base Mod Update</label>
+		<description>Updates Routes &amp; Resources to account for recent refactors in Empire Refactored.</description>
+		<releaseDate>2026-05-16</releaseDate>
+		<patchNoteType>Patch</patchNoteType>
+		<patchNoteLines>
+		<li>WorldComponent_SupplyChain updated to use ISettlementListener and IResearchListener interfaces, instead of the old ILifecycleParticipant</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

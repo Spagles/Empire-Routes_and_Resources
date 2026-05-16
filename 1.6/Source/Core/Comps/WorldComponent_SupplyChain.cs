@@ -7,7 +7,7 @@ using System;
 
 namespace FactionColonies.SupplyChain
 {
-    public class WorldComponent_SupplyChain : WorldComponent, ITaxTickParticipant, IMainTabWindowOverview, ILifecycleParticipant
+    public class WorldComponent_SupplyChain : WorldComponent, ITaxTickParticipant, IMainTabWindowOverview, ISettlementListener, IResearchListener
     {
         private SupplyChainMode mode = SupplyChainMode.Simple;
         private Dictionary<ResourceTypeDef, double> factionStockpile = new Dictionary<ResourceTypeDef, double>();
@@ -1012,7 +1012,7 @@ namespace FactionColonies.SupplyChain
             }
         }
 
-        // --- ILifecycleParticipant ---
+        // --- ISettlementListener + IResearchListener ---
 
         public void OnSettlementCreated(WorldSettlementFC settlement)
         {
@@ -1092,11 +1092,6 @@ namespace FactionColonies.SupplyChain
             comp?.RebuildNeedStates();
             comp?.SyncAllAutoMaxAllocations();
         }
-
-        public void OnSquadDeployed(WorldSettlementFC settlement, MilitaryJobDef job, bool isExtraSquad) { }
-        public void OnSquadRecalled(WorldSettlementFC settlement) { }
-        public void OnBattleResolved(WorldSettlementFC settlement, MilitaryJobDef job, bool victory, BattleResult result) { }
-        public void OnMercenaryDeath(MercenaryDeathEvent evt) { }
 
         public void OnResearchCompleted(ResearchProjectDef project)
         {
