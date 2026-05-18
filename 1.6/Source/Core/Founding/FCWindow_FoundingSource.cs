@@ -205,7 +205,7 @@ namespace FactionColonies.SupplyChain
 
         private void ShowSourceMenu(PlanetTile targetTile)
         {
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction == null) return;
 
             List<FloatMenuOption> options = new List<FloatMenuOption>();
@@ -262,7 +262,7 @@ namespace FactionColonies.SupplyChain
             if (wc is null || wc.Mode != SupplyChainMode.Complex) return;
             if (wc.FoundingValidator is null) return;
 
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null) return;
             int count = faction.settlements.Count + faction.settlementCaravansList.Count;
             if (count < SupplyChainSettings.freeSettlementThreshold) return;

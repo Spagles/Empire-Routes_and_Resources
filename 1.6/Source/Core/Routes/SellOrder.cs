@@ -42,12 +42,12 @@ namespace FactionColonies.SupplyChain
             double sellRate = SupplyChainSettings.overflowPenaltyRate;
 
             // Apply sell rate multiplier stat if a settlement context is available
-            if (settlement != null && FactionCache.FactionComp != null)
+            if (settlement != null && FindFC.FactionComp != null)
             {
                 FCStatDef sellRateStat = DefDatabase<FCStatDef>.GetNamedSilentFail("SC_SellRateMultiplier");
                 if (sellRateStat != null)
                 {
-                    double mult = FactionCache.FactionComp.GetStatValue(sellRateStat, settlement);
+                    double mult = FindFC.FactionComp.GetStatValue(sellRateStat, settlement);
                     if (mult > 0)
                         sellRate *= mult;
                 }

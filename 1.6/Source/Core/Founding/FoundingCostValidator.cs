@@ -134,7 +134,7 @@ namespace FactionColonies.SupplyChain
 
         private bool IsBelowThreshold()
         {
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null) return true;
             int count = faction.settlements.Count + faction.settlementCaravansList.Count;
             return count < SupplyChainSettings.freeSettlementThreshold;

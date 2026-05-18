@@ -211,7 +211,7 @@ namespace FactionColonies.SupplyChain
         public void RebuildNeedStates()
         {
             WorldSettlementFC ws = WorldSettlement;
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (ws is null || faction is null) return;
 
             // Preserve fulfilled values and surplus ratios from last tax resolution
@@ -1684,7 +1684,7 @@ namespace FactionColonies.SupplyChain
 
         private void DrawAddRouteForm(Rect viewRect, ref float curY, WorldComponent_SupplyChain wc)
         {
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null) return;
 
             WorldSettlementFC ws = WorldSettlement;
@@ -1736,8 +1736,7 @@ namespace FactionColonies.SupplyChain
                                 if (needDef.UsesResource(newRouteResource))
                                 {
                                     double demand = needDef.CalculateDemand(captured)
-                                        * needDef.GetResourceFraction(FactionCache.FactionComp != null
-                                            ? FactionCache.FactionComp.techLevel : TechLevel.Undefined, newRouteResource);
+                                        * needDef.GetResourceFraction(FindFC.TechLevel, newRouteResource);
                                     label += " (need: " + demand.ToString("F1") + ")";
                                     break;
                                 }
@@ -1789,7 +1788,7 @@ namespace FactionColonies.SupplyChain
         /// </summary>
         private void DrawAddRouteFormFixed(float x, ref float curY, float width, WorldComponent_SupplyChain wc)
         {
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null) return;
 
             WorldSettlementFC ws = WorldSettlement;
@@ -1840,8 +1839,7 @@ namespace FactionColonies.SupplyChain
                                 if (needDef.UsesResource(newRouteResource))
                                 {
                                     double demand = needDef.CalculateDemand(captured)
-                                        * needDef.GetResourceFraction(FactionCache.FactionComp != null
-                                            ? FactionCache.FactionComp.techLevel : TechLevel.Undefined, newRouteResource);
+                                        * needDef.GetResourceFraction(FindFC.TechLevel, newRouteResource);
                                     label += " (need: " + demand.ToString("F1") + ")";
                                     break;
                                 }
@@ -2024,7 +2022,7 @@ namespace FactionColonies.SupplyChain
             // Pre-compute projected fill rates per resource
             WorldComponent_SupplyChain wc = SupplyChainCache.Comp;
             bool isComplex = wc != null && wc.Mode == SupplyChainMode.Complex;
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             WorldSettlementFC ws = WorldSettlement;
 
             Dictionary<ResourceTypeDef, float> projectedRates = new Dictionary<ResourceTypeDef, float>();

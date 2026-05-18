@@ -24,7 +24,7 @@ namespace FactionColonies.SupplyChain
             }
             else
             {
-                FactionFC faction = FactionCache.FactionComp;
+                FactionFC faction = FindFC.FactionComp;
                 if (faction == null) return;
                 foreach (WorldSettlementFC settlement in faction.settlements)
                 {
@@ -77,7 +77,7 @@ namespace FactionColonies.SupplyChain
             WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
             if (comp == null) return;
 
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction == null) return;
 
             if (comp.Mode == SupplyChainMode.Simple)
@@ -134,7 +134,7 @@ namespace FactionColonies.SupplyChain
             WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
             if (comp == null) return;
 
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction == null) return;
 
             comp.PreTaxResolution(faction);
@@ -147,7 +147,7 @@ namespace FactionColonies.SupplyChain
             WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
             if (comp == null) return;
 
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction == null) return;
 
             comp.PostTaxResolution(faction);
@@ -197,7 +197,7 @@ namespace FactionColonies.SupplyChain
             WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
             if (comp == null) return;
 
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction == null) return;
 
             comp.PreTaxResolution(faction);

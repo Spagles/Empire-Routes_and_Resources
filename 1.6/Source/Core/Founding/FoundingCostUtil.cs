@@ -67,7 +67,7 @@ namespace FactionColonies.SupplyChain
 
         private static void EnsureCacheValid(PlanetTile targetTile)
         {
-            int currentCount = FactionCache.FactionComp?.settlements?.Count ?? 0;
+            int currentCount = FindFC.Settlements?.Count ?? 0;
 
             if (targetTile == cachedTile && currentCount == cachedSettlementCount)
                 return;
@@ -86,7 +86,7 @@ namespace FactionColonies.SupplyChain
 
         public static PlanetTile GetSourceTile(WorldSettlementFC settlement)
         {
-            PlanetTile tile = settlement?.Tile ?? FactionCache.FactionComp?.capitalLocation ?? PlanetTile.Invalid;
+            PlanetTile tile = settlement?.Tile ?? FindFC.CapitalLocation;
             if (tile == PlanetTile.Invalid)
                 tile = Find.AnyPlayerHomeMap.Tile;
 
@@ -95,7 +95,7 @@ namespace FactionColonies.SupplyChain
 
         private static WorldSettlementFC FindNearestSettlementUncached(PlanetTile targetTile)
         {
-            List<WorldSettlementFC> settlements = FactionCache.FactionComp?.settlements;
+            List<WorldSettlementFC> settlements = FindFC.Settlements;
             if (settlements is null || settlements.Count == 0) return null;
 
             WorldSettlementFC nearest = null;

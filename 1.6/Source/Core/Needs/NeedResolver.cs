@@ -21,7 +21,7 @@ namespace FactionColonies.SupplyChain
             List<NeedState> states = new List<NeedState>();
 
             // 1. Base settlement needs
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
             {
                 if (faction != null && !needDef.IsActiveForFaction(faction)) continue;

@@ -122,9 +122,7 @@ namespace FactionColonies.SupplyChain
 
         private void RegisterWithRegistries()
         {
-            TaxTickRegistry.Register(this);
-            MainTableRegistry.Register(this);
-            LifecycleRegistry.Register(this);
+            EmpireRegistry.Register(this);
 
             if (filterStockpileCap == null)
             {
@@ -150,12 +148,12 @@ namespace FactionColonies.SupplyChain
                     }
                 );
             }
-            BuildingFilterRegistry.Register(filterStockpileCap);
-            BuildingFilterRegistry.Register(filterBuildingNeeds);
+            EmpireRegistry.Register(filterStockpileCap);
+            EmpireRegistry.Register(filterBuildingNeeds);
 
             if (foundingValidator is null)
                 foundingValidator = new FoundingCostValidator(this);
-            FoundingValidatorRegistry.Register(foundingValidator);
+            EmpireRegistry.Register(foundingValidator);
         }
 
         public override void WorldComponentTick()
@@ -294,7 +292,7 @@ namespace FactionColonies.SupplyChain
 
         private void RecalculateCaps()
         {
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             int numSettlements = faction?.settlements.Count ?? 0;
 
             foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs)
@@ -322,7 +320,7 @@ namespace FactionColonies.SupplyChain
 
         private void InitAllLocalStockpiles()
         {
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null) return;
 
             foreach (WorldSettlementFC settlement in faction.settlements)
@@ -481,7 +479,7 @@ namespace FactionColonies.SupplyChain
         /// </summary>
         private static void AccumulateSettlementFlow(WorldSettlementFC settlement, ResourceTypeDef def, ref FlowBreakdown flow)
         {
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null || settlement is null) return;
             TechLevel tech = faction.techLevel;
             foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
@@ -552,7 +550,7 @@ namespace FactionColonies.SupplyChain
         {
             if (newMode == mode) return;
 
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null) return;
 
             if (mode == SupplyChainMode.Simple && newMode == SupplyChainMode.Complex)
@@ -963,12 +961,12 @@ namespace FactionColonies.SupplyChain
 
         public void PostSettlementCreateTax(WorldSettlementFC settlement, ref int silverAmount, List<Thing> titheThings)
         {
-            if (silverAmount <= 0 || FactionCache.FactionComp == null) return;
+            if (silverAmount <= 0 || FindFC.FactionComp == null) return;
 
             FCStatDef taxEffStat = SCStatDefOf.SC_TaxEfficiency;
             if (taxEffStat is null) return;
 
-            double mult = FactionCache.FactionComp.GetStatValue(taxEffStat, settlement);
+            double mult = FindFC.FactionComp.GetStatValue(taxEffStat, settlement);
             if (mult > 0 && mult != 1.0)
                 silverAmount = (int)(silverAmount * mult);
         }
@@ -1026,7 +1024,7 @@ namespace FactionColonies.SupplyChain
 
             if (!thresholdLetterSent)
             {
-                FactionFC faction = FactionCache.FactionComp;
+                FactionFC faction = FindFC.FactionComp;
                 if (faction is object)
                 {
                     int count = faction.settlements.Count + faction.settlementCaravansList.Count;
@@ -1095,7 +1093,7 @@ namespace FactionColonies.SupplyChain
 
         public void OnResearchCompleted(ResearchProjectDef project)
         {
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null) return;
             DirtyFlowCache();
             foreach (WorldSettlementFC settlement in faction.settlements)
@@ -1170,7 +1168,7 @@ namespace FactionColonies.SupplyChain
             curY += 38f;
 
             // Pre-calculate counts for scroll height
-            FactionFC simpleFaction = FactionCache.FactionComp;
+            FactionFC simpleFaction = FindFC.FactionComp;
             int resourceCount = 0;
             foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs)
             {
@@ -1525,7 +1523,7 @@ namespace FactionColonies.SupplyChain
             const float cellPad = 2f;
             const float arrowSize = 16f;
 
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             if (faction is null) return;
 
             // Resource columns cache (non-poolResource with cap > 0 in any settlement)
@@ -1696,7 +1694,7 @@ namespace FactionColonies.SupplyChain
             const float accentW = 4f;
             const float rowGap = 2f;
 
-            FactionFC faction = FactionCache.FactionComp;
+            FactionFC faction = FindFC.FactionComp;
             float totalHeight = supplyRoutes.Count * (routeRowH + rowGap) + 150f;
 
             Rect viewRect = ScrollUtil.BeginScrollView(rect, ref scrollPosRoutes, totalHeight);
@@ -1905,8 +1903,7 @@ namespace FactionColonies.SupplyChain
                             if (needDef.UsesResource(newRouteResource))
                             {
                                 double demand = needDef.CalculateDemand(captured)
-                                    * needDef.GetResourceFraction(FactionCache.FactionComp != null
-                                        ? FactionCache.FactionComp.techLevel : TechLevel.Undefined, newRouteResource);
+                                    * needDef.GetResourceFraction(FindFC.TechLevel, newRouteResource);
                                 label += " (need: " + demand.ToString("F1") + "/period)";
                                 break;
                             }

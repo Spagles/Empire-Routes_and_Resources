@@ -71,7 +71,7 @@ namespace FactionColonies.SupplyChain
             FCStatDef routeEffStat = SCStatDefOf.SC_RouteEfficiencyBonus;
             if (routeEffStat != null)
             {
-                double bonus = FactionCache.FactionComp.GetStatValue(routeEffStat, source);
+                double bonus = FindFC.FactionComp.GetStatValue(routeEffStat, source);
                 baseEfficiency += bonus;
             }
 
