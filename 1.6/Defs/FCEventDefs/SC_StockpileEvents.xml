@@ -1,479 +1,432 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <Defs>
 
-	<!-- ==================== -->
-	<!-- 1. Warehouse Fire    -->
-	<!-- ==================== -->
+  <FactionColonies.FCEventDef>
+    <defName>sc_warehouseFire</defName>
+    <label>Warehouse Fire</label>
+    <desc>A fire has broken out in one of your settlement's warehouses. Stockpiled goods are going up in smoke. How do you respond?</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>0</timeTillTrigger>
+    <activateAtStart>true</activateAtStart>
+    <cooldownTicks>600000</cooldownTicks>
+    <isRandomEvent>true</isRandomEvent>
+    <weight>8</weight>
+    <minDaysSinceFounded>7</minDaysSinceFounded>
+    <rangeSettlementsAffected>1~1</rangeSettlementsAffected>
+    <incompatibleEvents>
+      <li>sc_warehouseFire</li>
+    </incompatibleEvents>
+    <options>
+      <li>sc_warehouseFire_opt1</li>
+      <li>sc_warehouseFire_opt2</li>
+      <li>sc_warehouseFire_opt3</li>
+    </options>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_warehouseFire</defName>
-		<label>Warehouse Fire</label>
-		<desc>A fire has broken out in one of your settlement's warehouses. Stockpiled goods are going up in smoke.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>0</timeTillTrigger>
-		<isRandomEvent>true</isRandomEvent>
-		<weight>8</weight>
-		<cooldownTicks>600000</cooldownTicks>
-		<minDaysSinceFounded>7</minDaysSinceFounded>
-		<rangeSettlementsAffected>1~1</rangeSettlementsAffected>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<activateAtStart>true</activateAtStart>
-		<options>
-			<li>sc_warehouseFire_opt1</li>
-			<li>sc_warehouseFire_opt2</li>
-			<li>sc_warehouseFire_opt3</li>
-		</options>
-		<optionDescription>A fire has broken out in one of your settlement's warehouses. Stockpiled goods are going up in smoke. How do you respond?</optionDescription>
-		<incompatibleEvents>
-			<li>sc_warehouseFire</li>
-		</incompatibleEvents>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_warehouseFire_opt1</defName>
+    <label>Let it burn. We'll rebuild.</label>
+    <parentEvent>sc_warehouseFire</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <successEvent>sc_warehouseFire_burned</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<!-- Warehouse Fire Options -->
+  <FactionColonies.FCOptionDef>
+    <defName>sc_warehouseFire_opt2</defName>
+    <label>Mobilize workers to fight the fire.</label>
+    <parentEvent>sc_warehouseFire</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <silverCost>300</silverCost>
+    <successEvent>sc_warehouseFire_contained</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_warehouseFire_opt1</defName>
-		<label>Let it burn. We'll rebuild.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>0</silverCost>
-		<parentEvent>sc_warehouseFire</parentEvent>
-		<successEvent>sc_warehouseFire_burned</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_warehouseFire_opt3</defName>
+    <label>Salvage what we can and sell the rest for scrap.</label>
+    <parentEvent>sc_warehouseFire</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <silverCost>100</silverCost>
+    <successEvent>sc_warehouseFire_salvaged</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_warehouseFire_opt2</defName>
-		<label>Mobilize workers to fight the fire.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>300</silverCost>
-		<parentEvent>sc_warehouseFire</parentEvent>
-		<successEvent>sc_warehouseFire_contained</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_warehouseFire_burned</defName>
+    <label>Warehouse Gutted</label>
+    <desc>The warehouse is a total loss. Workers sift through charred remains, salvaging nothing.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>300000</timeTillTrigger>
+    <statModifiers>
+      <li>
+        <stat>happinessLostBase</stat>
+        <value>2</value>
+      </li>
+    </statModifiers>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <mult>0.6</mult>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_warehouseFire_opt3</defName>
-		<label>Salvage what we can and sell the rest for scrap.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>100</silverCost>
-		<parentEvent>sc_warehouseFire</parentEvent>
-		<successEvent>sc_warehouseFire_salvaged</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_warehouseFire_contained</defName>
+    <label>Fire Contained</label>
+    <desc>Quick action saved most of the stockpile, though the effort cost silver and sweat.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>60000</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <mult>0.85</mult>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<!-- Warehouse Fire Outcomes -->
+  <FactionColonies.FCEventDef>
+    <defName>sc_warehouseFire_salvaged</defName>
+    <label>Goods Salvaged</label>
+    <desc>The damaged goods were sold off cheap. Not ideal, but better than a pile of ash.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>60000</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <mult>0.7</mult>
+        <convertToSilver>true</convertToSilver>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_warehouseFire_burned</defName>
-		<label>Warehouse Gutted</label>
-		<desc>The warehouse is a total loss. Workers sift through charred remains, salvaging nothing.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>300000</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<statModifiers>
-			<li><stat>happinessLostBase</stat><value>2</value></li>
-		</statModifiers>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<mult>0.6</mult>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_merchantSurplus</defName>
+    <label>Merchant Surplus</label>
+    <desc>A merchant caravan is offloading surplus goods at bargain prices. They're eager to shed weight before moving on. What's your play?</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>0</timeTillTrigger>
+    <activateAtStart>true</activateAtStart>
+    <cooldownTicks>300000</cooldownTicks>
+    <isRandomEvent>true</isRandomEvent>
+    <weight>12</weight>
+    <minDaysSinceFounded>5</minDaysSinceFounded>
+    <rangeSettlementsAffected>1~2</rangeSettlementsAffected>
+    <incompatibleEvents>
+      <li>sc_merchantSurplus</li>
+      <li>sc_famineCrisis</li>
+    </incompatibleEvents>
+    <options>
+      <li>sc_merchantSurplus_opt1</li>
+      <li>sc_merchantSurplus_opt2</li>
+      <li>sc_merchantSurplus_opt3</li>
+    </options>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_warehouseFire_contained</defName>
-		<label>Fire Contained</label>
-		<desc>Quick action saved most of the stockpile, though the effort cost silver and sweat.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>60000</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<mult>0.85</mult>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_merchantSurplus_opt1</defName>
+    <label>Buy the lot. Take everything they're selling.</label>
+    <parentEvent>sc_merchantSurplus</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <silverCost>800</silverCost>
+    <successEvent>sc_merchantSurplus_bought</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_warehouseFire_salvaged</defName>
-		<label>Goods Salvaged</label>
-		<desc>The damaged goods were sold off cheap. Not ideal, but better than a pile of ash.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>60000</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<mult>0.7</mult>
-				<convertToSilver>true</convertToSilver>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_merchantSurplus_opt2</defName>
+    <label>Take what's free. No need to spend silver.</label>
+    <parentEvent>sc_merchantSurplus</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <successEvent>sc_merchantSurplus_free</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<!-- ==================== -->
-	<!-- 2. Merchant Surplus   -->
-	<!-- ==================== -->
+  <FactionColonies.FCOptionDef>
+    <defName>sc_merchantSurplus_opt3</defName>
+    <label>Sell it forward. Flip the goods for silver.</label>
+    <parentEvent>sc_merchantSurplus</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <silverCost>200</silverCost>
+    <successEvent>sc_merchantSurplus_flipped</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_merchantSurplus</defName>
-		<label>Merchant Surplus</label>
-		<desc>A merchant caravan, overladen and eager to shed weight, has dumped surplus goods at your settlement at bargain prices.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>0</timeTillTrigger>
-		<isRandomEvent>true</isRandomEvent>
-		<weight>12</weight>
-		<cooldownTicks>300000</cooldownTicks>
-		<minDaysSinceFounded>5</minDaysSinceFounded>
-		<rangeSettlementsAffected>1~2</rangeSettlementsAffected>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<activateAtStart>true</activateAtStart>
-		<options>
-			<li>sc_merchantSurplus_opt1</li>
-			<li>sc_merchantSurplus_opt2</li>
-			<li>sc_merchantSurplus_opt3</li>
-		</options>
-		<optionDescription>A merchant caravan is offloading surplus goods at bargain prices. They're eager to shed weight before moving on. What's your play?</optionDescription>
-		<incompatibleEvents>
-			<li>sc_merchantSurplus</li>
-			<li>sc_famineCrisis</li>
-		</incompatibleEvents>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_merchantSurplus_bought</defName>
+    <label>Bulk Purchase</label>
+    <desc>You bought out the entire caravan. Warehouses are overflowing with goods at a fraction of the usual cost.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>1500</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <baseAmount>6</baseAmount>
+        <perWorkerAmount>0.4</perWorkerAmount>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<!-- Merchant Surplus Options -->
+  <FactionColonies.FCEventDef>
+    <defName>sc_merchantSurplus_free</defName>
+    <label>Free Goods</label>
+    <desc>The merchants left behind what they couldn't carry. Not a fortune, but free is free.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>1500</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <baseAmount>3</baseAmount>
+        <perWorkerAmount>0.2</perWorkerAmount>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_merchantSurplus_opt1</defName>
-		<label>Buy the lot. Take everything they're selling.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>800</silverCost>
-		<parentEvent>sc_merchantSurplus</parentEvent>
-		<successEvent>sc_merchantSurplus_bought</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_merchantSurplus_flipped</defName>
+    <label>Quick Profit</label>
+    <desc>Your traders bought low and sold high. A tidy pile of silver for a day's work, though the warehouses stay lean.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>1500</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <baseAmount>1.5</baseAmount>
+        <perWorkerAmount>0.1</perWorkerAmount>
+        <convertToSilver>true</convertToSilver>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_merchantSurplus_opt2</defName>
-		<label>Take what's free. No need to spend silver.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>0</silverCost>
-		<parentEvent>sc_merchantSurplus</parentEvent>
-		<successEvent>sc_merchantSurplus_free</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_spoilage</defName>
+    <label>Food Spoilage</label>
+    <desc>Food stores have begun to rot. Workers report a foul stench from the warehouses, and contamination is spreading. How do you handle it?</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>0</timeTillTrigger>
+    <activateAtStart>true</activateAtStart>
+    <cooldownTicks>600000</cooldownTicks>
+    <isRandomEvent>true</isRandomEvent>
+    <weight>10</weight>
+    <minDaysSinceFounded>7</minDaysSinceFounded>
+    <rangeSettlementsAffected>1~1</rangeSettlementsAffected>
+    <restrictedBiomes>
+      <li>IceSheet</li>
+      <li>SeaIce</li>
+      <li>Tundra</li>
+    </restrictedBiomes>
+    <requiredResource>RTD_Food</requiredResource>
+    <incompatibleEvents>
+      <li>sc_spoilage</li>
+      <li>sc_windfallHarvest</li>
+    </incompatibleEvents>
+    <options>
+      <li>sc_spoilage_opt1</li>
+      <li>sc_spoilage_opt2</li>
+      <li>sc_spoilage_opt3</li>
+      <li>sc_spoilage_opt4</li>
+    </options>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_merchantSurplus_opt3</defName>
-		<label>Sell it forward. Flip the goods for silver.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>200</silverCost>
-		<parentEvent>sc_merchantSurplus</parentEvent>
-		<successEvent>sc_merchantSurplus_flipped</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_spoilage_opt1</defName>
+    <label>Rush cold storage measures. Spend silver to save food.</label>
+    <parentEvent>sc_spoilage</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <silverCost>400</silverCost>
+    <successEvent>sc_spoilage_coldStorage</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<!-- Merchant Surplus Outcomes -->
+  <FactionColonies.FCOptionDef>
+    <defName>sc_spoilage_opt2</defName>
+    <label>Distribute it before it goes bad. Extra rations for everyone.</label>
+    <parentEvent>sc_spoilage</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <silverCost>100</silverCost>
+    <successEvent>sc_spoilage_distributed</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_merchantSurplus_bought</defName>
-		<label>Bulk Purchase</label>
-		<desc>You bought out the entire caravan. Warehouses are overflowing with goods at a fraction of the usual cost.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>1500</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<baseAmount>6</baseAmount>
-				<perWorkerAmount>0.4</perWorkerAmount>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_spoilage_opt3</defName>
+    <label>Let it rot. Cut our losses.</label>
+    <parentEvent>sc_spoilage</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <successEvent>sc_spoilage_rotted</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_merchantSurplus_free</defName>
-		<label>Free Goods</label>
-		<desc>The merchants left behind what they couldn't carry. Not a fortune, but free is free.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>1500</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<baseAmount>3</baseAmount>
-				<perWorkerAmount>0.2</perWorkerAmount>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_spoilage_opt4</defName>
+    <label>Apply preservation techniques from our researchers.</label>
+    <parentEvent>sc_spoilage</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <successEvent>sc_spoilage_preserved</successEvent>
+    <requiredPolicies>
+      <li>technocratic</li>
+    </requiredPolicies>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_merchantSurplus_flipped</defName>
-		<label>Quick Profit</label>
-		<desc>Your traders bought low and sold high. A tidy pile of silver for a day's work, though the warehouses stay lean.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>1500</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<baseAmount>1.5</baseAmount>
-				<perWorkerAmount>0.1</perWorkerAmount>
-				<convertToSilver>true</convertToSilver>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_spoilage_coldStorage</defName>
+    <label>Emergency Cold Storage</label>
+    <desc>Hastily assembled cooling systems saved the bulk of the food. A costly but effective intervention.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>1500</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <resource>RTD_Food</resource>
+        <mult>0.9</mult>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<!-- ==================== -->
-	<!-- 3. Food Spoilage      -->
-	<!-- ==================== -->
+  <FactionColonies.FCEventDef>
+    <defName>sc_spoilage_distributed</defName>
+    <label>Emergency Rations</label>
+    <desc>Workers handed out food before it turned. Settlers enjoyed generous portions, and morale ticked up despite the waste.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>1500</timeTillTrigger>
+    <statModifiers>
+      <li>
+        <stat>happinessGainedBase</stat>
+        <value>0.5</value>
+      </li>
+    </statModifiers>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <resource>RTD_Food</resource>
+        <mult>0.85</mult>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_spoilage</defName>
-		<label>Food Spoilage</label>
-		<desc>Poorly stored food supplies have spoiled. Workers scramble to discard the rotting provisions before they contaminate the rest.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>0</timeTillTrigger>
-		<isRandomEvent>true</isRandomEvent>
-		<weight>10</weight>
-		<cooldownTicks>600000</cooldownTicks>
-		<minDaysSinceFounded>7</minDaysSinceFounded>
-		<rangeSettlementsAffected>1~1</rangeSettlementsAffected>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<requiredResource>RTD_Food</requiredResource>
-		<activateAtStart>true</activateAtStart>
-		<options>
-			<li>sc_spoilage_opt1</li>
-			<li>sc_spoilage_opt2</li>
-			<li>sc_spoilage_opt3</li>
-			<li>sc_spoilage_opt4</li>
-		</options>
-		<optionDescription>Food stores have begun to rot. Workers report a foul stench from the warehouses, and contamination is spreading. How do you handle it?</optionDescription>
-		<restrictedBiomes>
-			<li>IceSheet</li>
-			<li>SeaIce</li>
-			<li>Tundra</li>
-		</restrictedBiomes>
-		<incompatibleEvents>
-			<li>sc_spoilage</li>
-			<li>sc_windfallHarvest</li>
-		</incompatibleEvents>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_spoilage_rotted</defName>
+    <label>Food Lost</label>
+    <desc>A quarter of the food stores are ruined. The stench lingers as workers cart away the mess.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>1500</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <resource>RTD_Food</resource>
+        <mult>0.75</mult>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<!-- Spoilage Options -->
+  <FactionColonies.FCEventDef>
+    <defName>sc_spoilage_preserved</defName>
+    <label>Scientific Preservation</label>
+    <desc>Your researchers applied advanced preservation methods. Almost nothing was lost, and they've improved food handling protocols going forward.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>300000</timeTillTrigger>
+    <statModifiers>
+      <li>
+        <stat>RTD_Food_ProductionMultiplier</stat>
+        <value>1.05</value>
+      </li>
+    </statModifiers>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <resource>RTD_Food</resource>
+        <mult>0.95</mult>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_spoilage_opt1</defName>
-		<label>Rush cold storage measures. Spend silver to save food.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>400</silverCost>
-		<parentEvent>sc_spoilage</parentEvent>
-		<successEvent>sc_spoilage_coldStorage</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_windfallHarvest</defName>
+    <label>Windfall Harvest</label>
+    <desc>An unexpected bumper crop has overwhelmed your warehouses. There's more food than you can easily store. What do you do with the bounty?</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>0</timeTillTrigger>
+    <activateAtStart>true</activateAtStart>
+    <cooldownTicks>600000</cooldownTicks>
+    <isRandomEvent>true</isRandomEvent>
+    <weight>8</weight>
+    <minDaysSinceFounded>10</minDaysSinceFounded>
+    <rangeSettlementsAffected>1~2</rangeSettlementsAffected>
+    <restrictedBiomes>
+      <li>IceSheet</li>
+      <li>SeaIce</li>
+      <li>ExtremeDesert</li>
+    </restrictedBiomes>
+    <requiredResource>RTD_Food</requiredResource>
+    <incompatibleEvents>
+      <li>sc_windfallHarvest</li>
+      <li>sc_spoilage</li>
+      <li>sc_famineCrisis</li>
+    </incompatibleEvents>
+    <options>
+      <li>sc_windfallHarvest_opt1</li>
+      <li>sc_windfallHarvest_opt2</li>
+      <li>sc_windfallHarvest_opt3</li>
+    </options>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_spoilage_opt2</defName>
-		<label>Distribute it before it goes bad. Extra rations for everyone.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>100</silverCost>
-		<parentEvent>sc_spoilage</parentEvent>
-		<successEvent>sc_spoilage_distributed</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_windfallHarvest_opt1</defName>
+    <label>Hire extra hands to bring it all in.</label>
+    <parentEvent>sc_windfallHarvest</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <silverCost>500</silverCost>
+    <successEvent>sc_windfallHarvest_expanded</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_spoilage_opt3</defName>
-		<label>Let it rot. Cut our losses.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>0</silverCost>
-		<parentEvent>sc_spoilage</parentEvent>
-		<successEvent>sc_spoilage_rotted</successEvent>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_windfallHarvest_opt2</defName>
+    <label>Celebrate! Throw a harvest festival.</label>
+    <parentEvent>sc_windfallHarvest</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <successEvent>sc_windfallHarvest_celebrated</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<FactionColonies.FCOptionDef>
-		<defName>sc_spoilage_opt4</defName>
-		<label>Apply preservation techniques from our researchers.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>0</silverCost>
-		<parentEvent>sc_spoilage</parentEvent>
-		<successEvent>sc_spoilage_preserved</successEvent>
-		<requiredPolicies>
-			<li>technocratic</li>
-		</requiredPolicies>
-	</FactionColonies.FCOptionDef>
+  <FactionColonies.FCOptionDef>
+    <defName>sc_windfallHarvest_opt3</defName>
+    <label>Sell the surplus at market prices.</label>
+    <parentEvent>sc_windfallHarvest</parentEvent>
+    <baseChanceOfSuccess>100</baseChanceOfSuccess>
+    <successEvent>sc_windfallHarvest_sold</successEvent>
+  </FactionColonies.FCOptionDef>
 
-	<!-- Spoilage Outcomes -->
+  <FactionColonies.FCEventDef>
+    <defName>sc_windfallHarvest_expanded</defName>
+    <label>Full Harvest</label>
+    <desc>Every last bushel has been gathered and stored. The extra labor cost silver, but the warehouses are packed to the rafters.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>1500</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <resource>RTD_Food</resource>
+        <baseAmount>10</baseAmount>
+        <perWorkerAmount>1.0</perWorkerAmount>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_spoilage_coldStorage</defName>
-		<label>Emergency Cold Storage</label>
-		<desc>Hastily assembled cooling systems saved the bulk of the food. A costly but effective intervention.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>1500</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<resource>RTD_Food</resource>
-				<mult>0.9</mult>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_windfallHarvest_celebrated</defName>
+    <label>Harvest Festival</label>
+    <desc>The settlement is alive with feasting and celebration. Food stocks are solid, and spirits are high.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>300000</timeTillTrigger>
+    <statModifiers>
+      <li>
+        <stat>happinessGainedBase</stat>
+        <value>1</value>
+      </li>
+    </statModifiers>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <resource>RTD_Food</resource>
+        <baseAmount>5</baseAmount>
+        <perWorkerAmount>0.5</perWorkerAmount>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
-	<FactionColonies.FCEventDef>
-		<defName>sc_spoilage_distributed</defName>
-		<label>Emergency Rations</label>
-		<desc>Workers handed out food before it turned. Settlers enjoyed generous portions, and morale ticked up despite the waste.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>1500</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<statModifiers>
-			<li><stat>happinessGainedBase</stat><value>0.5</value></li>
-		</statModifiers>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<resource>RTD_Food</resource>
-				<mult>0.85</mult>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
-
-	<FactionColonies.FCEventDef>
-		<defName>sc_spoilage_rotted</defName>
-		<label>Food Lost</label>
-		<desc>A quarter of the food stores are ruined. The stench lingers as workers cart away the mess.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>1500</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<resource>RTD_Food</resource>
-				<mult>0.75</mult>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
-
-	<FactionColonies.FCEventDef>
-		<defName>sc_spoilage_preserved</defName>
-		<label>Scientific Preservation</label>
-		<desc>Your researchers applied advanced preservation methods. Almost nothing was lost, and they've improved food handling protocols going forward.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>300000</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<statModifiers>
-			<li><stat>RTD_Food_ProductionMultiplier</stat><value>1.05</value></li>
-		</statModifiers>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<resource>RTD_Food</resource>
-				<mult>0.95</mult>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
-
-	<!-- ==================== -->
-	<!-- 4. Windfall Harvest   -->
-	<!-- ==================== -->
-
-	<FactionColonies.FCEventDef>
-		<defName>sc_windfallHarvest</defName>
-		<label>Windfall Harvest</label>
-		<desc>Ideal growing conditions have produced an unexpected bumper crop. Warehouses strain under the bounty.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>0</timeTillTrigger>
-		<isRandomEvent>true</isRandomEvent>
-		<weight>8</weight>
-		<cooldownTicks>600000</cooldownTicks>
-		<minDaysSinceFounded>10</minDaysSinceFounded>
-		<rangeSettlementsAffected>1~2</rangeSettlementsAffected>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<requiredResource>RTD_Food</requiredResource>
-		<activateAtStart>true</activateAtStart>
-		<options>
-			<li>sc_windfallHarvest_opt1</li>
-			<li>sc_windfallHarvest_opt2</li>
-			<li>sc_windfallHarvest_opt3</li>
-		</options>
-		<optionDescription>An unexpected bumper crop has overwhelmed your warehouses. There's more food than you can easily store. What do you do with the bounty?</optionDescription>
-		<restrictedBiomes>
-			<li>IceSheet</li>
-			<li>SeaIce</li>
-			<li>ExtremeDesert</li>
-		</restrictedBiomes>
-		<incompatibleEvents>
-			<li>sc_windfallHarvest</li>
-			<li>sc_spoilage</li>
-			<li>sc_famineCrisis</li>
-		</incompatibleEvents>
-	</FactionColonies.FCEventDef>
-
-	<!-- Windfall Harvest Options -->
-
-	<FactionColonies.FCOptionDef>
-		<defName>sc_windfallHarvest_opt1</defName>
-		<label>Hire extra hands to bring it all in.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>300</silverCost>
-		<parentEvent>sc_windfallHarvest</parentEvent>
-		<successEvent>sc_windfallHarvest_expanded</successEvent>
-	</FactionColonies.FCOptionDef>
-
-	<FactionColonies.FCOptionDef>
-		<defName>sc_windfallHarvest_opt2</defName>
-		<label>Celebrate! Throw a harvest festival.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>0</silverCost>
-		<parentEvent>sc_windfallHarvest</parentEvent>
-		<successEvent>sc_windfallHarvest_celebrated</successEvent>
-	</FactionColonies.FCOptionDef>
-
-	<FactionColonies.FCOptionDef>
-		<defName>sc_windfallHarvest_opt3</defName>
-		<label>Sell the surplus at market prices.</label>
-		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>0</silverCost>
-		<parentEvent>sc_windfallHarvest</parentEvent>
-		<successEvent>sc_windfallHarvest_sold</successEvent>
-	</FactionColonies.FCOptionDef>
-
-	<!-- Windfall Harvest Outcomes -->
-
-	<FactionColonies.FCEventDef>
-		<defName>sc_windfallHarvest_expanded</defName>
-		<label>Full Harvest</label>
-		<desc>Every last bushel has been gathered and stored. The extra labor cost silver, but the warehouses are packed to the rafters.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>1500</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<resource>RTD_Food</resource>
-				<baseAmount>10</baseAmount>
-				<perWorkerAmount>1.0</perWorkerAmount>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
-
-	<FactionColonies.FCEventDef>
-		<defName>sc_windfallHarvest_celebrated</defName>
-		<label>Harvest Festival</label>
-		<desc>The settlement is alive with feasting and celebration. Food stocks are solid, and spirits are high.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>300000</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<statModifiers>
-			<li><stat>happinessGainedBase</stat><value>1</value></li>
-		</statModifiers>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<resource>RTD_Food</resource>
-				<baseAmount>5</baseAmount>
-				<perWorkerAmount>0.5</perWorkerAmount>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
-
-	<FactionColonies.FCEventDef>
-		<defName>sc_windfallHarvest_sold</defName>
-		<label>Harvest Sold</label>
-		<desc>Half the crop went straight to market. The silver is welcome, though the warehouses aren't as full as they could be.</desc>
-		<category>EC_SupplyChain</category>
-		<timeTillTrigger>1500</timeTillTrigger>
-		<settlementsCarryOver>true</settlementsCarryOver>
-		<modExtensions>
-			<li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
-				<resource>RTD_Food</resource>
-				<baseAmount>2.5</baseAmount>
-				<perWorkerAmount>0.25</perWorkerAmount>
-				<convertToSilver>true</convertToSilver>
-			</li>
-		</modExtensions>
-	</FactionColonies.FCEventDef>
+  <FactionColonies.FCEventDef>
+    <defName>sc_windfallHarvest_sold</defName>
+    <label>Harvest Sold</label>
+    <desc>Half the crop went straight to market. The silver is welcome, though the warehouses aren't as full as they could be.</desc>
+    <category>EC_SupplyChain</category>
+    <timeTillTrigger>1500</timeTillTrigger>
+    <modExtensions>
+      <li Class="FactionColonies.SupplyChain.SCEventHandler_Stockpile">
+        <resource>RTD_Food</resource>
+        <baseAmount>2.5</baseAmount>
+        <perWorkerAmount>0.25</perWorkerAmount>
+        <convertToSilver>true</convertToSilver>
+      </li>
+    </modExtensions>
+  </FactionColonies.FCEventDef>
 
 </Defs>
