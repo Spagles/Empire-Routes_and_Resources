@@ -285,4 +285,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_2_20</defName>
+		<label>Events Update</label>
+		<description>A handful of balance and editing changes to Routes &amp; Resources&apos; events.</description>
+		<releaseDate>2026-06-01</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>Update and edit R&amp;R events, to keep up with the balance changes to the base mod and More Events submod</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
