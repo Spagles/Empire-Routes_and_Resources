@@ -192,7 +192,7 @@
 		<defName>sc_medShortage_opt4</defName>
 		<label>Our researchers can synthesize substitutes.</label>
 		<baseChanceOfSuccess>100</baseChanceOfSuccess>
-		<silverCost>200</silverCost>
+		<silverCost>1500</silverCost>
 		<parentEvent>sc_medicineShortage</parentEvent>
 		<successEvent>sc_medShortage_synthesized</successEvent>
 		<requiredPolicies>
@@ -249,9 +249,9 @@
 		<category>EC_SupplyChain</category>
 		<timeTillTrigger>600000</timeTillTrigger>
 		<settlementsCarryOver>true</settlementsCarryOver>
-		<statModifiers>
+		<permanentStatModifiers>
 			<li><stat>RTD_Medicine_ProductionMultiplier</stat><value>1.15</value></li>
-		</statModifiers>
+		</permanentStatModifiers>
 	</FactionColonies.FCEventDef>
 
 	<!-- ==================== -->

@@ -84,7 +84,7 @@
 		<timeTillTriggerMax>480000</timeTillTriggerMax>
 		<settlementsCarryOver>true</settlementsCarryOver>
 		<statModifiers>
-			<li><stat>SC_RouteEfficiencyBonus</stat><value>-0.05</value></li>
+			<li><stat>SC_RouteEfficiencyBonus</stat><value>0.05</value></li>
 		</statModifiers>
 	</FactionColonies.FCEventDef>
 
@@ -460,8 +460,8 @@
 		<timeTillTrigger>300000</timeTillTrigger>
 		<settlementsCarryOver>true</settlementsCarryOver>
 		<statModifiers>
-			<li><stat>SC_RouteEfficiencyBonus</stat><value>-0.05</value></li>
-			<li><stat>SC_SellRateMultiplier</stat><value>0.95</value></li>
+			<li><stat>SC_RouteEfficiencyBonus</stat><value>-0.025</value></li>
+			<li><stat>SC_SellRateMultiplier</stat><value>0.975</value></li>
 		</statModifiers>
 	</FactionColonies.FCEventDef>
 
