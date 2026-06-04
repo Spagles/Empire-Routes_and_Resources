@@ -14,7 +14,7 @@ namespace FactionColonies.SupplyChain
         /// Resolves needs for a single settlement by drawing from the given stockpile.
         /// Used in Complex mode (each settlement draws from its own local stockpile).
         /// </summary>
-        public static void ResolveSettlementNeeds(WorldSettlementFC settlement, IStockpile stockpile, WorldObjectComp_SupplyChain comp)
+        public static void ResolveSettlementNeeds(WorldSettlementFC settlement, IStockpile stockpile, WorldObjectComp_SettlementNeeds comp)
         {
             if (stockpile == null || comp == null) return;
 
@@ -69,7 +69,7 @@ namespace FactionColonies.SupplyChain
 
             foreach (WorldSettlementFC settlement in faction.settlements)
             {
-                WorldObjectComp_SupplyChain comp = SupplyChainCache.GetSettlementComp(settlement);
+                WorldObjectComp_SettlementNeeds comp = SupplyChainCache.GetNeedsComp(settlement);
                 if (comp == null) continue;
 
                 // Base needs
@@ -79,7 +79,7 @@ namespace FactionColonies.SupplyChain
                     if (!needDef.IsActiveForSettlement(settlement)) continue;
 
                     WorldSettlementFC capturedSettlement = settlement;
-                    WorldObjectComp_SupplyChain capturedComp = comp;
+                    WorldObjectComp_SettlementNeeds capturedComp = comp;
                     needDef.BuildNeedStates(settlement, faction, 0.0, delegate(NeedState ns)
                     {
                         allDemands.Add(new NeedDemandEntry
@@ -177,8 +177,8 @@ namespace FactionColonies.SupplyChain
 
             // Distribute proportionally and draw
             // Group results by settlement
-            Dictionary<WorldObjectComp_SupplyChain, List<NeedState>> compStates =
-                new Dictionary<WorldObjectComp_SupplyChain, List<NeedState>>();
+            Dictionary<WorldObjectComp_SettlementNeeds, List<NeedState>> compStates =
+                new Dictionary<WorldObjectComp_SettlementNeeds, List<NeedState>>();
 
             // Track provider resolutions for OnNeedsResolved callbacks
             Dictionary<INeedProvider, List<NeedResolution>> providerResolutions =
@@ -223,7 +223,7 @@ namespace FactionColonies.SupplyChain
             }
 
             // Compute surplus ratios (post-all-draws, faction-wide shared stockpile)
-            foreach (KeyValuePair<WorldObjectComp_SupplyChain, List<NeedState>> kv in compStates)
+            foreach (KeyValuePair<WorldObjectComp_SettlementNeeds, List<NeedState>> kv in compStates)
             {
                 foreach (NeedState state in kv.Value)
                 {
@@ -234,7 +234,7 @@ namespace FactionColonies.SupplyChain
             }
 
             // Apply results
-            foreach (KeyValuePair<WorldObjectComp_SupplyChain, List<NeedState>> kv in compStates)
+            foreach (KeyValuePair<WorldObjectComp_SettlementNeeds, List<NeedState>> kv in compStates)
             {
                 kv.Key.SetNeedStates(kv.Value);
                 WorldSettlementFC ws = kv.Key.WorldSettlement;
@@ -251,7 +251,7 @@ namespace FactionColonies.SupplyChain
             // Settlements with no demands still need cleared states
             foreach (WorldSettlementFC settlement in faction.settlements)
             {
-                WorldObjectComp_SupplyChain comp = SupplyChainCache.GetSettlementComp(settlement);
+                WorldObjectComp_SettlementNeeds comp = SupplyChainCache.GetNeedsComp(settlement);
                 if (comp == null) continue;
                 if (!compStates.ContainsKey(comp))
                 {
@@ -332,7 +332,7 @@ namespace FactionColonies.SupplyChain
         private struct NeedDemandEntry
         {
             public WorldSettlementFC settlement;
-            public WorldObjectComp_SupplyChain comp;
+            public WorldObjectComp_SettlementNeeds comp;
             public string needId;
             public ResourceTypeDef resource;
             public double demand;

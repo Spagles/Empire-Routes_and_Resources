@@ -91,10 +91,11 @@ namespace FactionColonies.SupplyChain
                 foreach (WorldSettlementFC settlement in faction.settlements)
                 {
                     WorldObjectComp_SupplyChain sc = SupplyChainCache.GetSettlementComp(settlement);
-                    if (sc == null) continue;
+                    WorldObjectComp_SettlementNeeds needsComp = SupplyChainCache.GetNeedsComp(settlement);
+                    if (sc == null || needsComp == null) continue;
                     IStockpile stockpile = sc.GetStockpile();
                     if (stockpile == null) continue;
-                    NeedResolver.ResolveSettlementNeeds(settlement, stockpile, sc);
+                    NeedResolver.ResolveSettlementNeeds(settlement, stockpile, needsComp);
                 }
             }
             Log.Message("[Empire-SupplyChain] Debug: Needs resolved.");

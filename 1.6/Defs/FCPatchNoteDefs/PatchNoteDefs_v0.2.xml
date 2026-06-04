@@ -299,4 +299,19 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_2_21</defName>
+		<label>Minor Backend Refactor</label>
+		<description>Decomposes a previously monolithic WorldObjectComp into three smaller ones, for the sake of code readability and understanding. No user-facing behavior change.</description>
+		<releaseDate>2026-06-04</releaseDate>
+		<patchNoteType>Patch</patchNoteType>
+		<patchNoteLines>
+		<li>Pull needs system out of WorldObjectComp_SupplyChain into a new WorldObjectComp_SettlementNeeds</li>
+		<li>Pull settlement window UI code out of WorldObjectComp_SupplyChain into a new WorldObjectComp_SupplyChainUI</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

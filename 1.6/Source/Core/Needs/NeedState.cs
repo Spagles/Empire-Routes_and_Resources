@@ -12,7 +12,7 @@ namespace FactionColonies.SupplyChain
 
     /// <summary>
     /// Tracks the satisfaction of a single need for one settlement.
-    /// Persisted on WorldObjectComp_SupplyChain.
+    /// Persisted on WorldObjectComp_SettlementNeeds.
     /// </summary>
     public class NeedState : IExposable
     {

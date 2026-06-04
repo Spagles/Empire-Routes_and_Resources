@@ -885,10 +885,11 @@ namespace FactionColonies.SupplyChain
             // 5. RESOLVE NEEDS (per-settlement, from local stockpiles)
             foreach (WorldSettlementFC settlement in faction.settlements)
             {
-                WorldObjectComp_SupplyChain needComp = GetComp(settlement);
-                if (needComp is null) continue;
+                WorldObjectComp_SupplyChain dataComp = GetComp(settlement);
+                WorldObjectComp_SettlementNeeds needComp = SupplyChainCache.GetNeedsComp(settlement);
+                if (dataComp is null || needComp is null) continue;
 
-                IStockpile needStockpile = needComp.GetStockpile();
+                IStockpile needStockpile = dataComp.GetStockpile();
                 if (needStockpile is null) continue;
 
                 NeedResolver.ResolveSettlementNeeds(settlement, needStockpile, needComp);
@@ -1020,7 +1021,7 @@ namespace FactionColonies.SupplyChain
             DirtyFlowCache();
             resourceColumnsDirty = true;
 
-            GetComp(settlement)?.RebuildNeedStates();
+            SupplyChainCache.GetNeedsComp(settlement)?.RebuildNeedStates();
 
             if (!thresholdLetterSent)
             {
@@ -1057,7 +1058,7 @@ namespace FactionColonies.SupplyChain
         {
             DirtyFlowCache();
             WorldObjectComp_SupplyChain comp = GetComp(settlement);
-            comp?.RebuildNeedStates();
+            SupplyChainCache.GetNeedsComp(settlement)?.RebuildNeedStates();
             comp?.SyncAllAutoMaxAllocations();
         }
 
@@ -1076,7 +1077,7 @@ namespace FactionColonies.SupplyChain
             resourceColumnsDirty = true;
             WorldObjectComp_SupplyChain comp = GetComp(settlement);
             comp?.DirtyLocalCaps();
-            comp?.RebuildNeedStates();
+            SupplyChainCache.GetNeedsComp(settlement)?.RebuildNeedStates();
             comp?.SyncAllAutoMaxAllocations();
         }
 
@@ -1087,7 +1088,7 @@ namespace FactionColonies.SupplyChain
             resourceColumnsDirty = true;
             WorldObjectComp_SupplyChain comp = GetComp(settlement);
             comp?.DirtyLocalCaps();
-            comp?.RebuildNeedStates();
+            SupplyChainCache.GetNeedsComp(settlement)?.RebuildNeedStates();
             comp?.SyncAllAutoMaxAllocations();
         }
 

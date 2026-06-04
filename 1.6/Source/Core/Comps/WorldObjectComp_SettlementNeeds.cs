@@ -1,0 +1,369 @@
+using System;
+using System.Collections.Generic;
+using RimWorld;
+using RimWorld.Planet;
+using Verse;
+
+namespace FactionColonies.SupplyChain
+{
+    public class WorldObjectCompProperties_SettlementNeeds : WorldObjectCompProperties
+    {
+        public WorldObjectCompProperties_SettlementNeeds()
+        {
+            compClass = typeof(WorldObjectComp_SettlementNeeds);
+        }
+    }
+
+    /*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*/
+    /* Settlement needs comp.                                                 */
+    /*                                                                        */
+    /* Owns the settlement's need states (consumption demands vs. fulfilled   */
+    /* amounts) and translates shortfalls/surplus into faction stat           */
+    /* modifiers. Split out of WorldObjectComp_SupplyChain: needs are a       */
+    /* distinct concern from the resource ledger (stockpile/allocation/       */
+    /* tithe), and the resolver already passes the stockpile in separately.   */
+    /*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*/
+    public class WorldObjectComp_SettlementNeeds : WorldObjectComp, IStatModifierProvider, ISettlementPostLoadInit
+    {
+        private List<NeedState> needStates = new List<NeedState>();
+        private bool hasAnyShortfall;
+        private bool hasCompletedFirstTax;
+        public bool HasCompletedFirstTax => hasCompletedFirstTax;
+
+        private WorldSettlementFC cachedSettlement;
+
+        public WorldSettlementFC WorldSettlement
+        {
+            get
+            {
+                if (cachedSettlement is null)
+                    cachedSettlement = parent as WorldSettlementFC;
+                return cachedSettlement;
+            }
+        }
+
+        // --- Needs ---
+
+        public List<NeedState> NeedStates => needStates;
+
+        public void SetNeedStates(List<NeedState> states)
+        {
+            needStates = states ?? new List<NeedState>();
+            UpdateHasAnyShortfall();
+            statModsDirty = true;
+        }
+
+        /// <summary>
+        /// Marks that the settlement's first tax cycle has completed, ending the founding
+        /// grace period during which unmet-need penalties are waived. Called from the data
+        /// comp's PostTaxCleanup so the single orchestrator call site covers both subsystems.
+        /// </summary>
+        public void MarkFirstTaxComplete()
+        {
+            hasCompletedFirstTax = true;
+            statModsDirty = true;
+        }
+
+        private NeedState FindNeedState(string needId)
+        {
+            foreach (NeedState state in needStates)
+            {
+                if (state.needId == needId)
+                    return state;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Fully rebuilds needStates from current settlement state — base, building, and
+        /// comp-provided needs — while preserving fulfilled values from the last tax resolution.
+        /// Called on settlement creation, load, worker changes, building changes, and upgrades.
+        /// </summary>
+        public void RebuildNeedStates()
+        {
+            WorldSettlementFC ws = WorldSettlement;
+            FactionFC faction = FindFC.FactionComp;
+            if (ws is null || faction is null) return;
+
+            // Preserve fulfilled values and surplus ratios from last tax resolution
+            Dictionary<string, double> prevFulfilled = new Dictionary<string, double>();
+            Dictionary<string, double> prevSurplusRatio = new Dictionary<string, double>();
+            foreach(NeedState state in needStates)
+            {
+                prevFulfilled[state.needId] = state.fulfilled;
+                prevSurplusRatio[state.needId] = state.surplusRatio;
+            }
+
+            List<NeedState> newStates = new List<NeedState>();
+
+            // 1. Base settlement needs (from SettlementNeedDefs)
+            foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
+            {
+                if (!needDef.IsActiveForFaction(faction)) continue;
+                if (!needDef.IsActiveForSettlement(ws)) continue;
+
+                needDef.BuildNeedStates(ws, faction, 0.0, delegate(NeedState ns)
+                {
+                    prevFulfilled.TryGetValue(ns.needId, out double fulfilled);
+                    prevSurplusRatio.TryGetValue(ns.needId, out double prevSurplus);
+                    ns.fulfilled = fulfilled;
+                    ns.surplusRatio = prevSurplus;
+                    newStates.Add(ns);
+                });
+            }
+
+            // 2. Building needs (from BuildingNeedExtension)
+            if (ws.BuildingsComp != null)
+            {
+                foreach (BuildingFC building in ws.BuildingsComp.Buildings)
+                {
+                    if (building.def is null || building.def == BuildingFCDefOf.Empty) continue;
+                    BuildingNeedExtension ext = SupplyChainCache.GetBuildingNeedExt(building.def);
+                    if (ext?.inputs is null) continue;
+                    foreach (BuildingResourceInput input in ext.inputs)
+                    {
+                        if (input.resource is null || input.amount <= 0) continue;
+                        string needId = $"bldg.{building.def.defName}.{input.resource.defName}";
+                        string needLabel = $"{building.def.label.CapitalizeFirst()} - {input.resource.label.CapitalizeFirst()}";
+                        prevFulfilled.TryGetValue(needId, out double fulfilled);
+                        newStates.Add(new NeedState(needId, input.resource, input.amount, fulfilled,
+                            needLabel, NeedCategory.Building, ext.penalties));
+                    }
+                }
+            }
+
+            // 3. Comp-provided needs (from INeedProvider)
+            foreach (WorldObjectComp comp in ws.AllComps)
+            {
+                INeedProvider provider = comp as INeedProvider;
+                if (provider is null) continue;
+                List<NeedEntry> compNeeds = new List<NeedEntry>();
+                provider.CollectNeeds(ws, compNeeds);
+                foreach (NeedEntry entry in compNeeds)
+                {
+                    if (entry.resource is null || entry.amount <= 0) continue;
+                    prevFulfilled.TryGetValue(entry.needId, out double fulfilled);
+                    newStates.Add(new NeedState(entry.needId, entry.resource, entry.amount, fulfilled,
+                        entry.label, NeedCategory.Comp, entry.penalties));
+                }
+            }
+
+            needStates = newStates;
+            UpdateHasAnyShortfall();
+            statModsDirty = true;
+        }
+
+        private void UpdateHasAnyShortfall()
+        {
+            hasAnyShortfall = false;
+            foreach (NeedState state in needStates)
+            {
+                if (state.demanded > 0 && state.fulfilled < state.demanded)
+                {
+                    hasAnyShortfall = true;
+                    return;
+                }
+            }
+        }
+
+        // --- IStatModifierProvider (needs slice) ---
+
+        private Dictionary<FCStatDef, double> cachedStatMods;
+        private bool statModsDirty = true;
+
+        public double GetStatModifier(FCStatDef stat)
+        {
+            if (statModsDirty || cachedStatMods is null)
+            {
+                if (cachedStatMods is null)
+                    cachedStatMods = new Dictionary<FCStatDef, double>();
+                else
+                    cachedStatMods.Clear();
+                statModsDirty = false;
+            }
+
+            if (cachedStatMods.TryGetValue(stat, out double val))
+                return val;
+
+            val = ComputeStatModifier(stat);
+            cachedStatMods[stat] = val;
+            return val;
+        }
+
+        private double ComputeStatModifier(FCStatDef stat)
+        {
+            double value = stat.IdentityValue;
+
+            if (stat.aggregation == FCStatAggregation.Additive)
+            {
+                // 0. Suppress natural stat stabilization when any need is unmet
+                if (hasCompletedFirstTax && hasAnyShortfall)
+                {
+                    if (stat == FCStatDefOf.happinessGainedBase)
+                        value -= FCSettings.happinessBaseGain;
+                    else if (stat == FCStatDefOf.loyaltyGainedBase)
+                        value -= FCSettings.loyaltyBaseGain;
+                    else if (stat == FCStatDefOf.unrestLostBase)
+                        value -= FCSettings.unrestBaseLost;
+                }
+
+                // 1. Penalties for unmet needs (waived during founding grace period)
+                if (hasCompletedFirstTax)
+                {
+                    foreach (NeedState state in needStates)
+                    {
+                        if (state.penalties is null || state.demanded <= 0 || state.fulfilled >= state.demanded)
+                            continue;
+                        double shortfall = state.demanded - state.fulfilled;
+                        foreach (NeedPenalty penalty in state.penalties)
+                        {
+                            if (penalty.stat == stat)
+                                value += penalty.penaltyPerUnit * shortfall;
+                        }
+                    }
+                }
+
+                // 2. Surplus bonuses
+                foreach (NeedState state in needStates)
+                {
+                    if (state.surplusBonuses is null || state.surplusRatio <= 0)
+                        continue;
+                    double maxSR = state.maxSurplusRatio > 0 ? state.maxSurplusRatio : 2.0;
+                    double fraction = Math.Min(1.0, state.surplusRatio / maxSR);
+                    foreach (NeedSurplusBonus bonus in state.surplusBonuses)
+                    {
+                        if (bonus.stat == stat)
+                            value += bonus.maxBonus * fraction;
+                    }
+                }
+            }
+            else // Multiplicative
+            {
+                // Tax efficiency: 1.0 + 0.20 * averageSatisfaction
+                FCStatDef taxEffStat = SCStatDefOf.SC_TaxEfficiency;
+                if (stat == taxEffStat && needStates.Count > 0)
+                {
+                    double sum = 0;
+                    int count = 0;
+                    foreach (NeedState state in needStates)
+                    {
+                        if (state.demanded > 0) { sum += state.Satisfaction; count++; }
+                    }
+                    if (count > 0)
+                        value = FormulaUtil.TaxEfficiency(sum / count);
+                }
+            }
+
+            return value;
+        }
+
+        public string GetStatModifierDesc(FCStatDef stat)
+        {
+            string desc = null;
+
+            // Stabilization suppression description
+            if (hasCompletedFirstTax && hasAnyShortfall &&
+                (stat == FCStatDefOf.happinessGainedBase ||
+                 stat == FCStatDefOf.loyaltyGainedBase ||
+                 stat == FCStatDefOf.unrestLostBase))
+            {
+                desc = "SC_StabilizationSuppressed".Translate();
+            }
+
+            // Penalty descriptions (waived during founding grace period)
+            if (hasCompletedFirstTax)
+            {
+                foreach (NeedState state in needStates)
+                {
+                    if (state.penalties is null || state.demanded <= 0 || state.fulfilled >= state.demanded)
+                        continue;
+                    double shortfall = state.demanded - state.fulfilled;
+                    foreach (NeedPenalty penalty in state.penalties)
+                    {
+                        if (penalty.stat != stat) continue;
+                        double val = penalty.penaltyPerUnit * shortfall;
+                        if (val <= 0) continue;
+                        val = Math.Round(val, 2);
+
+                        bool invert = stat.invertedForDisplay;
+                        /* Due to the weirdness of unrest, we actually want to invert the inversion for unrest values */
+                        /* Should *really* replace unrest with "stability" or something... */
+                        if (stat == FCStatDefOf.unrestGainedBase ||
+                            stat == FCStatDefOf.unrestGainedMultiplier ||
+                            stat == FCStatDefOf.unrestLostBase ||
+                            stat == FCStatDefOf.unrestLostMultiplier)
+                            invert = !invert;
+
+                        string line = "SC_UnmetNeedPenalty".Translate(state.label, TextUtil.ColorizeAdditiveBonus(val, hardinvert: invert));
+                        desc = desc is null ? line : desc + "\n" + line;
+                    }
+                }
+            }
+
+            // Surplus bonus descriptions
+            foreach (NeedState state in needStates)
+            {
+                if (state.surplusBonuses is null || state.surplusRatio <= 0)
+                    continue;
+                double maxSR = state.maxSurplusRatio > 0 ? state.maxSurplusRatio : 2.0;
+                double fraction = Math.Min(1.0, state.surplusRatio / maxSR);
+                foreach (NeedSurplusBonus bonus in state.surplusBonuses)
+                {
+                    if (bonus.stat != stat) continue;
+                    double val = bonus.maxBonus * fraction;
+                    if (val <= 0) continue;
+
+                    string line = "SC_SurplusBonus".Translate(bonus.label ?? state.label, val.ToString("F1"));
+                    desc = desc is null ? line : desc + "\n" + line;
+                }
+            }
+
+            // Tax efficiency description
+            FCStatDef taxEffStat = SCStatDefOf.SC_TaxEfficiency;
+            if (stat == taxEffStat && needStates.Count > 0)
+            {
+                double sum = 0;
+                int count = 0;
+                foreach (NeedState state in needStates)
+                {
+                    if (state.demanded > 0) { sum += state.Satisfaction; count++; }
+                }
+                if (count > 0)
+                {
+                    double avgSat = sum / count;
+                    double mult = FormulaUtil.TaxEfficiency(avgSat);
+                    string line = "SC_TaxEfficiencyDesc".Translate(
+                        (avgSat * 100).ToString("F0"), (mult * 100).ToString("F0"));
+                    desc = desc is null ? line : desc + "\n" + line;
+                }
+            }
+
+            return desc;
+        }
+
+        // --- Save/Load ---
+
+        public override void PostExposeData()
+        {
+            base.PostExposeData();
+            Scribe_Collections.Look(ref needStates, "needStates", LookMode.Deep);
+            if (needStates is null)
+                needStates = new List<NeedState>();
+            UpdateHasAnyShortfall();
+
+            Scribe_Values.Look(ref hasCompletedFirstTax, "hasCompletedFirstTax", false);
+        }
+
+        // --- ISettlementPostLoadInit ---
+
+        public void PostSettlementLoadInit(WorldSettlementFC settlement)
+        {
+            if (settlement is null)
+            {
+                LogSC.Warning($"PostSettlementLoadInit (needs) encountered null settlement");
+                return;
+            }
+            RebuildNeedStates();
+        }
+    }
+}

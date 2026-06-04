@@ -16,6 +16,10 @@ namespace FactionColonies.SupplyChain
         private static Dictionary<WorldSettlementFC, WorldObjectComp_SupplyChain> _compCache
             = new Dictionary<WorldSettlementFC, WorldObjectComp_SupplyChain>();
 
+        // Settlement -> WorldObjectComp_SettlementNeeds lookup cache
+        private static Dictionary<WorldSettlementFC, WorldObjectComp_SettlementNeeds> _needsCompCache
+            = new Dictionary<WorldSettlementFC, WorldObjectComp_SettlementNeeds>();
+
         // Cached def lists (defs don't change mid-game)
         private static List<SettlementNeedDef> _cachedNeedDefs;
         private static List<ResourceTypeDef> _cachedResourceTypeDefs;
@@ -83,9 +87,26 @@ namespace FactionColonies.SupplyChain
             return cached;
         }
 
+        /// <summary>
+        /// Cached lookup for the settlement-needs comp on a settlement.
+        /// Mirrors <see cref="GetSettlementComp"/> for the needs subsystem.
+        /// </summary>
+        public static WorldObjectComp_SettlementNeeds GetNeedsComp(WorldSettlementFC settlement)
+        {
+            if (settlement == null) return null;
+
+            if (!_needsCompCache.TryGetValue(settlement, out WorldObjectComp_SettlementNeeds cached))
+            {
+                cached = settlement.GetComponent<WorldObjectComp_SettlementNeeds>();
+                _needsCompCache[settlement] = cached;
+            }
+            return cached;
+        }
+
         public static void ClearCompCache()
         {
             _compCache.Clear();
+            _needsCompCache.Clear();
         }
 
         public static void InvalidateCache()
@@ -93,6 +114,7 @@ namespace FactionColonies.SupplyChain
             _comp = null;
             _buildingExtCache.Clear();
             _compCache.Clear();
+            _needsCompCache.Clear();
             _cachedNeedDefs = null;
             _cachedResourceTypeDefs = null;
         }

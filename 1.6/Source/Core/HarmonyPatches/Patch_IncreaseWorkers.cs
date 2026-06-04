@@ -9,9 +9,9 @@ namespace FactionColonies.SupplyChain
         public static void Postfix(WorldSettlementFC __instance)
         {
             SupplyChainCache.Comp?.DirtyFlowCache();
-            WorldObjectComp_SupplyChain comp = SupplyChainCache.GetSettlementComp(__instance);
-            if (comp != null)
-                comp.RebuildNeedStates();
+            WorldObjectComp_SettlementNeeds needsComp = SupplyChainCache.GetNeedsComp(__instance);
+            if (needsComp != null)
+                needsComp.RebuildNeedStates();
         }
     }
 }
