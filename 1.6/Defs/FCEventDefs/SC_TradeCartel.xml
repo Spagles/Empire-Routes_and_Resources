@@ -4,7 +4,7 @@
   <FactionColonies.FCEventDef>
     <defName>sc_tradeCartel</defName>
     <label>Trade Cartel</label>
-    <desc>A powerful trade cartel has approached your empire with an offer: exclusive trade partnerships that would improve sell rates significantly. But their terms come with complications.</desc>
+    <desc>A powerful trade cartel has approached your {FACTION_TITLE} with an offer: exclusive trade partnerships that would improve sell rates significantly. But their terms come with complications.</desc>
     <category>EC_SupplyChain</category>
     <timeTillTrigger>0</timeTillTrigger>
     <activateAtStart>true</activateAtStart>

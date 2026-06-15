@@ -314,4 +314,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_2_22</defName>
+		<label>Empire Naming Update</label>
+		<description>Updates some UI text to refer to the player&apos;s faction by name or title instead of using generic terms like &quot;your empire&quot; -- similar to what was recently done in the base mod.</description>
+		<releaseDate>2026-06-14</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>Use the player&apos;s faction&apos;s name and title more</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

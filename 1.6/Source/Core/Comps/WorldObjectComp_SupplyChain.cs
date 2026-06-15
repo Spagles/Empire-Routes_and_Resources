@@ -567,7 +567,7 @@ namespace FactionColonies.SupplyChain
             yield return new Command_Toggle
             {
                 defaultLabel = "SC_ShowAllRoutes".Translate(),
-                defaultDesc = "SC_ShowAllRoutesDesc".Translate(),
+                defaultDesc = "SC_ShowAllRoutesDesc".Translate(FindFC.EmpireTitle),
                 icon = TexLoad.iconTrade,
                 isActive = () => wc.showAllRoutes,
                 toggleAction = () => { wc.showAllRoutes = !wc.showAllRoutes; }

@@ -36,7 +36,7 @@
     <SC_OverflowInfo>Overflow and sell orders convert at {0} of base silver rate ({1} silver per unit). Silver is distributed across settlements.</SC_OverflowInfo>
 
     <!-- Faction Tab - Complex Mode -->
-    <SC_EmpireSupplyNetwork>Empire Supply Network</SC_EmpireSupplyNetwork>
+    <SC_EmpireSupplyNetwork>{0} Supply Network</SC_EmpireSupplyNetwork>
     <SC_ModeComplex>Mode: Complex</SC_ModeComplex>
     <SC_Settlement>Settlement</SC_Settlement>
     <SC_PerPeriod>{0}/period</SC_PerPeriod>
@@ -120,7 +120,7 @@
     <SC_ShowSettlementRoutes>Show Routes</SC_ShowSettlementRoutes>
     <SC_ShowSettlementRoutesDesc>Toggle display of supply route lines for this settlement on the world map.</SC_ShowSettlementRoutesDesc>
     <SC_ShowAllRoutes>Show All Routes</SC_ShowAllRoutes>
-    <SC_ShowAllRoutesDesc>Toggle display of all supply route lines across the empire on the world map.</SC_ShowAllRoutesDesc>
+    <SC_ShowAllRoutesDesc>Toggle display of all supply route lines across the {0} on the world map.</SC_ShowAllRoutesDesc>
     <SC_ShowRouteLabels>Show Labels</SC_ShowRouteLabels>
     <SC_ShowRouteLabelsDesc>Toggle display of resource type and amount labels on visible supply route lines.</SC_ShowRouteLabelsDesc>
     <SC_SettingsAnimateArrows>Animate route arrows on world map</SC_SettingsAnimateArrows>
@@ -179,7 +179,7 @@
 
     <!-- Threshold Letter -->
     <SC_ThresholdLetterTitle>Resource Costs Now Apply</SC_ThresholdLetterTitle>
-    <SC_ThresholdLetterBody>Your empire has reached {0} settlements. From now on, founding new settlements will require resources from your stockpile in addition to the silver cost.\n\nYou can view the required resources in the settlement creation window.</SC_ThresholdLetterBody>
+    <SC_ThresholdLetterBody>Your {0} has reached {1} settlements. From now on, founding new settlements will require resources from your stockpile in addition to the silver cost.\n\nYou can view the required resources in the settlement creation window.</SC_ThresholdLetterBody>
 
     <!-- Buy Resources -->
     <SC_BuyOption>Buy {0}x {1}: {2} silver</SC_BuyOption>

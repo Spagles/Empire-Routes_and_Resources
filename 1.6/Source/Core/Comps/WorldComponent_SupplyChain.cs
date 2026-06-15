@@ -1035,7 +1035,7 @@ namespace FactionColonies.SupplyChain
                         Find.LetterStack.ReceiveLetter(
                             "SC_ThresholdLetterTitle".Translate(),
                             "SC_ThresholdLetterBody".Translate(
-                                SupplyChainSettings.freeSettlementThreshold.ToString()),
+                                FindFC.EmpireTitle, SupplyChainSettings.freeSettlementThreshold.ToString()),
                             LetterDefOf.NeutralEvent);
                     }
                 }
@@ -1473,7 +1473,7 @@ namespace FactionColonies.SupplyChain
 
             // Header
             Text.Font = GameFont.Medium;
-            Widgets.Label(new Rect(inner.x, inner.y, 300f, 30f), "SC_EmpireSupplyNetwork".Translate());
+            Widgets.Label(new Rect(inner.x, inner.y, 300f, 30f), "SC_EmpireSupplyNetwork".Translate(FindFC.EmpireTitle));
             Text.Font = GameFont.Tiny;
             GUI.color = Color.gray;
             Widgets.Label(new Rect(inner.x + 310f, inner.y + 4f, 100f, 26f), "SC_ModeComplex".Translate());
