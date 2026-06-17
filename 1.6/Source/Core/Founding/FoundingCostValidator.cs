@@ -30,7 +30,7 @@ namespace FactionColonies.SupplyChain
             this.worldComp = worldComp;
         }
 
-        public bool CanFoundSettlement(PlanetTile tile, WorldSettlementDef type, out string reason)
+        public bool CanFoundSettlement(PlanetTile tile, WorldSettlementDef type, out string reason, float costMultiplier)
         {
             reason = null;
 
@@ -53,7 +53,7 @@ namespace FactionColonies.SupplyChain
 
             foreach (FCResourceCost entry in costs)
             {
-                double needed = FormulaUtil.ResourceCost(entry.amount, distMult);
+                double needed = FormulaUtil.ResourceCost(entry.amount, distMult) * costMultiplier;
                 double have = stockpile.GetAmount(entry.resource);
 
                 if (have < needed)
@@ -74,7 +74,7 @@ namespace FactionColonies.SupplyChain
             return allowed;
         }
 
-        public string GetAdditionalCostDescription(PlanetTile tile, WorldSettlementDef type)
+        public string GetAdditionalCostDescription(PlanetTile tile, WorldSettlementDef type, float costMultiplier)
         {
             List<FCResourceCost> costs = FoundingCostUtil.GetFoundingResourceCosts(type);
             if (costs is null || costs.Count == 0) return null;
@@ -86,7 +86,7 @@ namespace FactionColonies.SupplyChain
             for (int i = 0; i < costs.Count; i++)
             {
                 FCResourceCost entry = costs[i];
-                double needed = FormulaUtil.ResourceCost(entry.amount, distMult);
+                double needed = FormulaUtil.ResourceCost(entry.amount, distMult) * costMultiplier;
                 if (i > 0) sb.Append(", ");
                 sb.Append(needed.ToString("F0"));
                 sb.Append(" ");
@@ -96,7 +96,7 @@ namespace FactionColonies.SupplyChain
             return "SC_FoundingCostFrom".Translate(sb.ToString(), GetSourceName(tile));
         }
 
-        public void OnSettlementFounded(PlanetTile tile, WorldSettlementDef type)
+        public void OnSettlementFounded(PlanetTile tile, WorldSettlementDef type, float costMultiplier)
         {
             List<FCResourceCost> costs = FoundingCostUtil.GetFoundingResourceCosts(type);
             if (costs is null || costs.Count == 0) return;
@@ -108,7 +108,7 @@ namespace FactionColonies.SupplyChain
 
             foreach (FCResourceCost entry in costs)
             {
-                double needed = FormulaUtil.ResourceCost(entry.amount, distMult);
+                double needed = FormulaUtil.ResourceCost(entry.amount, distMult) * costMultiplier;
                 stockpile.TryDraw(entry.resource, needed, out _);
             }
         }
