@@ -126,6 +126,8 @@ namespace FactionColonies.SupplyChain
             return "SC_TabName".Translate();
         }
 
+        public bool ShouldShowOverviewTab(WorldSettlementFC settlement) => true;
+
         public void DrawOverviewTab(Rect boundingBox)
         {
             if (uiSettlement == null) return;
