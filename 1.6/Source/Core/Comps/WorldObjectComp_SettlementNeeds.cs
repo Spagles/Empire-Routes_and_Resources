@@ -294,7 +294,9 @@ namespace FactionColonies.SupplyChain
                             stat == FCStatDefOf.unrestLostMultiplier)
                             invert = !invert;
 
-                        string line = "SC_UnmetNeedPenalty".Translate(state.label, TextUtil.ColorizeAdditiveBonus(val, hardinvert: invert));
+                        // .Resolve() flattens the TaggedString to a string while preserving the <color> tag;
+                        // the implicit string conversion would instead StripTags() and drop the color.
+                        string line = "SC_UnmetNeedPenalty".Translate(state.label, TextUtil.ColorizeAdditiveBonus(val, hardinvert: invert)).Resolve();
                         desc = desc is null ? line : desc + "\n" + line;
                     }
                 }
