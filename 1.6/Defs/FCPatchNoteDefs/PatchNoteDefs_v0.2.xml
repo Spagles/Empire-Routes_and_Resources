@@ -356,4 +356,19 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_2_25</defName>
+		<label>Minor fixes</label>
+		<description>Some minor fixes and changes.</description>
+		<releaseDate>2026-06-17</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>Add debug tests</li>
+		<li>Fixes several modifier tooltips that weren&apos;t being correctly colorized</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
