@@ -56,6 +56,7 @@ namespace FactionColonies.SupplyChain
             Listing_Standard ls = new Listing_Standard();
             Rect viewRect = ScrollUtil.BeginScrollView(inRect, ref scrollPos, 750f);
             ls.Begin(viewRect);
+            Listing_StandardExtensions.ResetRowStripe();
 
             // Mode toggle
             string modeLabel = mode == SupplyChainMode.Simple ? "Simple" : "Complex";
@@ -89,10 +90,9 @@ namespace FactionColonies.SupplyChain
             ls.CheckboxLabeled("SC_SettingsUseMaxWorkers".Translate(), ref useMaxWorkersForNeeds);
             ls.Gap(12f);
 
-            ls.Label("SC_SettingsOverflowRate".Translate(
-                overflowPenaltyRate.ToString("P0"),
-                FormulaUtil.OverflowSilver(1).ToString("F0")));
-            overflowPenaltyRate = ls.Slider(overflowPenaltyRate, 0.1f, 1.0f);
+            overflowPenaltyRate = ls.SliderTextField("SC_SettingsOverflowRate", "SC_SettingsOverflowRate".Translate(),
+                overflowPenaltyRate, 0.1f, 1.0f, decimals: 2,
+                tooltip: "SC_SettingsOverflowRateTip".Translate(FormulaUtil.OverflowSilver(1).ToString("F0")));
             ls.Gap(12f);
 
             ls.Label("SC_SettingsBaseCap".Translate(baseCapPerSettlement.ToString("F0")));
