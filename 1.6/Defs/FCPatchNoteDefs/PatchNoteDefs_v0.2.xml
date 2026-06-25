@@ -385,4 +385,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_2_27</defName>
+		<label>Minor UI Fix</label>
+		<description>Minor UI fix when this mod is used alongside other submods.</description>
+		<releaseDate>2026-06-25</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>Fixes the companion Found New Settlement window to not overlap with similar such windows from other submods</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

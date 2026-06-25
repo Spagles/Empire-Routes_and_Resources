@@ -9,8 +9,10 @@ namespace FactionColonies.SupplyChain
     /// Companion window to <see cref="CreateColonyWindowFc"/> that shows the source settlement
     /// picker and resource availability for founding costs (Complex mode only).
     /// </summary>
-    public class FCWindow_FoundingSource : Window
+    public class FCWindow_FoundingSource : Window, IFoundingCompanionWindow
     {
+        public int CompanionOrder => 20;
+
         private const float WindowWidth = 250f;
         private const float RowHeight = 22f;
         private const float ButtonHeight = 30f;
@@ -21,7 +23,6 @@ namespace FactionColonies.SupplyChain
         private FoundingCostValidator validator;
         private WorldComponent_SupplyChain worldComp;
         private List<FCResourceCost> cachedCosts;
-        private bool lastModifiersWindowOpen;
 
         public override Vector2 InitialSize => new Vector2(WindowWidth, 350f);
 
@@ -47,22 +48,7 @@ namespace FactionColonies.SupplyChain
         protected override void SetInitialSizeAndPosition()
         {
             base.SetInitialSizeAndPosition();
-            // Position to the left of the tile modifiers window if open, otherwise left of the create window
-            FCWindow_CreateColonyStatModifiers modifiersWindow = Find.WindowStack.WindowOfType<FCWindow_CreateColonyStatModifiers>();
-            if (modifiersWindow != null)
-            {
-                windowRect.x = modifiersWindow.windowRect.x - WindowWidth - 10f;
-                windowRect.y = modifiersWindow.windowRect.y;
-            }
-            else
-            {
-                CreateColonyWindowFc createWindow = Find.WindowStack.WindowOfType<CreateColonyWindowFc>();
-                if (createWindow != null)
-                {
-                    windowRect.x = createWindow.windowRect.x - WindowWidth - 10f;
-                    windowRect.y = createWindow.windowRect.y;
-                }
-            }
+            FoundingScreenHooks.ReflowCompanions();
         }
 
         public override void DoWindowContents(Rect inRect)
@@ -78,18 +64,6 @@ namespace FactionColonies.SupplyChain
             {
                 Close();
                 return;
-            }
-
-            // Reposition when the tile modifiers companion window opens or closes
-            FCWindow_CreateColonyStatModifiers modWindow = Find.WindowStack.WindowOfType<FCWindow_CreateColonyStatModifiers>();
-            bool modifiersOpen = modWindow is object;
-            if (modifiersOpen != lastModifiersWindowOpen)
-            {
-                lastModifiersWindowOpen = modifiersOpen;
-                if (modWindow is object)
-                    windowRect.x = modWindow.windowRect.x - WindowWidth - 10f;
-                else
-                    windowRect.x = createWindow.windowRect.x - WindowWidth - 10f;
             }
 
             PlanetTile currentTile = createWindow.currentTileSelected;
