@@ -131,9 +131,9 @@ In practice this rewards building outward in deliberate steps and keeping a well
 
 How much a settlement demands scales with its size - some needs grow with its workforce, others with its level. The resources that satisfy a need also shift as your faction advances: a need met by simple materials early on may draw on more industrial inputs at higher tech.
 
-Each cycle, the settlement's demand is checked against what's available, and satisfaction is simply the share of demand that was met. A fully supplied settlement is satisfied; a half-supplied one is half-satisfied.
+Each day, the settlement's demand is checked against what's available, and satisfaction is simply the share of demand that was met. A fully supplied settlement is satisfied; a half-supplied one is half-satisfied.
 
-Some buildings add their own draw on the stockpile. Cold Storage consumes power to run; Power Vaults and Reserves consume mining output. These building inputs are resolved alongside the four core needs and carry their own penalties when they go unmet, so a building you can't supply becomes a liability rather than an asset.
+Some buildings add their own draw on the stockpile. Cold Storage consumes power to run; Power Vaults and Reserves consume mining output. Building inputs work differently from settlement needs: a building is supplied all-or-nothing. If the stockpile can't cover a building's full inputs for the day, that building goes dormant - it produces nothing, grants no bonus, and costs no upkeep until its inputs are available again.
 
 What meeting, missing, or exceeding these needs actually does to a settlement is covered in Need Consequences.</description>
         <category>CodexCat_SC_Needs</category>

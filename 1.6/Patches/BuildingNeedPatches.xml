@@ -30,9 +30,6 @@
 				<inputs>
 					<li><resource>RTD_Mining</resource><amount>0.5</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>material shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -58,9 +55,6 @@
 				<inputs>
 					<li><resource>RTD_Mining</resource><amount>0.75</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>ammo shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -86,9 +80,6 @@
 				<inputs>
 					<li><resource>RTD_Food</resource><amount>0.5</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>loyaltyLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>loyalty</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -114,9 +105,6 @@
 				<inputs>
 					<li><resource>RTD_Food</resource><amount>0.75</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>loyaltyLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>hungry mercs</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -142,9 +130,6 @@
 				<inputs>
 					<li><resource>RTD_Animals</resource><amount>0.3</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>1.7</penaltyPerUnit><label>material shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -170,9 +155,6 @@
 				<inputs>
 					<li><resource>RTD_Power</resource><amount>0.5</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>power outage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -198,9 +180,6 @@
 				<inputs>
 					<li><resource>RTD_Power</resource><amount>0.75</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>1.3</penaltyPerUnit><label>crops wilting</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -226,9 +205,6 @@
 				<inputs>
 					<li><resource>RTD_Power</resource><amount>0.5</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>equipment idle</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -254,9 +230,6 @@
 				<inputs>
 					<li><resource>RTD_Power</resource><amount>0.25</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>production halt</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -282,9 +255,6 @@
 				<inputs>
 					<li><resource>RTD_Animals</resource><amount>0.25</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>no test subjects</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -311,9 +281,6 @@
 					<li><resource>RTD_Power</resource><amount>0.5</amount></li>
 					<li><resource>RTD_Research</resource><amount>0.3</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>1.9</penaltyPerUnit><label>manufacturing halted</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -340,9 +307,6 @@
 					<li><resource>RTD_Power</resource><amount>0.5</amount></li>
 					<li><resource>RTD_Medicine</resource><amount>0.5</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>1.5</penaltyPerUnit><label>cloning offline</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -368,9 +332,6 @@
 				<inputs>
 					<li><resource>RTD_Power</resource><amount>0.5</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>reconstruction offline</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -404,9 +365,6 @@
 				<inputs>
 					<li><resource>RTD_Animals</resource><amount>0.3</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>1.7</penaltyPerUnit><label>hide shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -435,9 +393,6 @@
 				<inputs>
 					<li><resource>RTD_Animals</resource><amount>0.3</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>1.7</penaltyPerUnit><label>hide shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -466,9 +421,6 @@
 				<inputs>
 					<li><resource>RTD_Animals</resource><amount>0.5</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>2.0</penaltyPerUnit><label>overhunting</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -497,9 +449,6 @@
 				<inputs>
 					<li><resource>RTD_Food</resource><amount>0.2</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>1.3</penaltyPerUnit><label>grain shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -528,9 +477,6 @@
 				<inputs>
 					<li><resource>RTD_Logging</resource><amount>0.1</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>1</penaltyPerUnit><label>lumber shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -559,9 +505,6 @@
 				<inputs>
 					<li><resource>RTD_Mining</resource><amount>0.3</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>1.7</penaltyPerUnit><label>ore shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -598,9 +541,6 @@
 					<li><resource>RTD_Weapons</resource><amount>0.3</amount></li>
 					<li><resource>RTD_Apparel</resource><amount>0.3</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>happinessLostBase</stat><penaltyPerUnit>1.5</penaltyPerUnit><label>provisioning</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -629,9 +569,6 @@
 				<inputs>
 					<li><resource>RTD_Logging</resource><amount>0.2</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>1.3</penaltyPerUnit><label>timber shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -660,9 +597,6 @@
 				<inputs>
 					<li><resource>RTD_Mining</resource><amount>0.3</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>1.7</penaltyPerUnit><label>ore shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -691,9 +625,6 @@
 				<inputs>
 					<li><resource>RTD_Animals</resource><amount>0.3</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>1.7</penaltyPerUnit><label>hide shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
@@ -722,9 +653,6 @@
 				<inputs>
 					<li><resource>RTD_Medicine</resource><amount>0.2</amount></li>
 				</inputs>
-				<penalties>
-					<li><stat>prosperityLostBase</stat><penaltyPerUnit>1.3</penaltyPerUnit><label>chemical shortage</label></li>
-				</penalties>
 			</li>
 		</value>
 	</Operation>
