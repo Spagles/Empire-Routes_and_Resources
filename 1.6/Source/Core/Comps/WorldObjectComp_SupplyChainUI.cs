@@ -1063,6 +1063,19 @@ namespace FactionColonies.SupplyChain
 
         // --- Shared: Allocation Sliders ---
 
+        private const float AllocStep = 0.1f;
+
+        /* Floor a value down to the 0.1 allocation grid, returned as an exact multiple
+           of AllocStep. Reconstructing as tenths*AllocStep (the same literal passed to
+           HorizontalSlider's roundTo) makes the slider's internal re-rounding return the
+           identical float, so it never re-triggers the drag-slider sound each frame. */
+        private static float FloorToAllocGrid(double value)
+        {
+            int tenths = Mathf.FloorToInt((float)value / AllocStep + 0.001f);
+            if (tenths < 0) tenths = 0;
+            return tenths * AllocStep;
+        }
+
         private void DrawAllocationSliders(Rect viewRect, ref float curY, float rowHeight)
         {
             int idx = 0;
@@ -1106,7 +1119,7 @@ namespace FactionColonies.SupplyChain
                     Text.Anchor = TextAnchor.MiddleLeft;
 
                     Widgets.Label(new Rect(cx + 400f, curY, 90f, rowHeight),
-                        currentAlloc.ToString("F1") + " / " + rawProd.ToString("F1"));
+                        FloorToAllocGrid(currentAlloc).ToString("F1") + " / " + FloorToAllocGrid(rawProd).ToString("F1"));
 
                     float silverDiverted = (float)(currentAlloc * FCSettings.silverPerResource);
                     if (silverDiverted >= 0.5f)
@@ -1121,20 +1134,22 @@ namespace FactionColonies.SupplyChain
                 }
                 else if (rawProd > 0)
                 {
-                    float sliderVal = (float)Math.Round(currentAlloc,1);
-                    // Snap max down to the 0.1 rounding grid so the slider's
-                    // internal rounding never pushes the value above max
-                    // (which causes an infinite audio-cue loop).
-                    float maxSlider = Mathf.Floor((float)maxAlloc * 10f) / 10f;
-                    if (maxSlider < 0f) maxSlider = 0f;
+                    // Floor both the value and the max onto the 0.1 grid as exact
+                    // multiples of AllocStep. The slider re-rounds its value with the
+                    // same step internally; passing a non-matching float (e.g.
+                    // (float)Math.Round(0.9) == 0.89999997 vs the slider's 0.90000004)
+                    // makes value != num true every frame, which fires the drag-slider
+                    // sound continuously even when idle.
+                    float sliderVal = FloorToAllocGrid(currentAlloc);
+                    float maxSlider = FloorToAllocGrid(maxAlloc);
 
                     float newVal = Widgets.HorizontalSlider(
                         new Rect(cx + 150f, curY + 8f, 240f, rowHeight - 16f),
                         sliderVal, 0f, maxSlider, false,
-                        null, null, null, 0.1f);
+                        null, null, null, AllocStep);
 
-                    newVal = MathF.Round(newVal, 1);
-
+                    // newVal is already a multiple of AllocStep and clamped to
+                    // [0, maxSlider]; clamp once more to correct a stale over-allocation.
                     if (newVal > maxSlider)
                         newVal = maxSlider;
 
@@ -1144,7 +1159,7 @@ namespace FactionColonies.SupplyChain
                     }
 
                     Widgets.Label(new Rect(cx + 400f, curY, 90f, rowHeight),
-                        currentAlloc.ToString("F1") + " / " + rawProd.ToString("F1"));
+                        FloorToAllocGrid(currentAlloc).ToString("F1") + " / " + FloorToAllocGrid(rawProd).ToString("F1"));
 
                     float silverDiverted = (float)(currentAlloc * FCSettings.silverPerResource);
                     if (silverDiverted >= 0.5f)
