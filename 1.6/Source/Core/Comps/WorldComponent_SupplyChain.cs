@@ -7,7 +7,7 @@ using System;
 
 namespace FactionColonies.SupplyChain
 {
-    public class WorldComponent_SupplyChain : WorldComponent, ITaxTickParticipant, IMainTabWindowOverview, ISettlementListener, IResearchListener
+    public class WorldComponent_SupplyChain : WorldComponent, ITaxTickParticipant, IDailyAccrualParticipant, IMainTabWindowOverview, ISettlementListener, IResearchListener
     {
         private SupplyChainMode mode = SupplyChainMode.Simple;
         private Dictionary<ResourceTypeDef, double> factionStockpile = new Dictionary<ResourceTypeDef, double>();
@@ -494,6 +494,7 @@ namespace FactionColonies.SupplyChain
                 foreach (BuildingFC building in settlement.BuildingsComp.Buildings)
                 {
                     if (building.def is null || building.def == BuildingFCDefOf.Empty) continue;
+                    if (!building.active) continue; // dormant building consumes nothing
                     BuildingNeedExtension ext = SupplyChainCache.GetBuildingNeedExt(building.def);
                     if (ext?.inputs is null) continue;
                     foreach (BuildingResourceInput input in ext.inputs)
@@ -661,74 +662,8 @@ namespace FactionColonies.SupplyChain
 
         private void PreTaxResolution_Simple(FactionFC faction)
         {
-            // Sync auto-max allocations to current production before reading any allocation values.
-            foreach (WorldSettlementFC settlement in faction.settlements)
-                GetComp(settlement)?.SyncAllAutoMaxAllocations();
-
-            RecalculateCaps();
-
-            // No trade network in Simple mode — clear any stale network info
-            foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                GetComp(settlement)?.SetNetworkInfo(0, 0);
-            }
-
-            Dictionary<ResourceTypeDef, double> totalOverflow = new Dictionary<ResourceTypeDef, double>();
-            Dictionary<ResourceTypeDef, Dictionary<WorldSettlementFC, double>> contributions =
-                new Dictionary<ResourceTypeDef, Dictionary<WorldSettlementFC, double>>();
-
-            // 1. ACCUMULATE
-            foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                WorldObjectComp_SupplyChain comp = GetComp(settlement);
-                if (comp is null) continue;
-
-                foreach (ResourceFC resource in settlement.Resources)
-                {
-                    double allocated = comp.GetAllocation(resource.def);
-                    if (allocated <= 0) continue;
-
-                    double excess = stockpile.Credit(resource.def, allocated);
-
-                    Dictionary<WorldSettlementFC, double> contribMap;
-                    if (!contributions.TryGetValue(resource.def, out contribMap))
-                    {
-                        contribMap = new Dictionary<WorldSettlementFC, double>();
-                        contributions[resource.def] = contribMap;
-                    }
-                    contribMap[settlement] = allocated;
-
-                    // Pool resources cap silently — no overflow auto-sell
-                    if (excess > 0 && !resource.def.isPoolResource)
-                    {
-                        totalOverflow.TryGetValue(resource.def, out double current);
-                        totalOverflow[resource.def] = current + excess;
-                    }
-                }
-            }
-
-            // 2. RESOLVE TITHE INJECTIONS (draw from shared stockpile, set externalTitheBudget)
-            foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                GetComp(settlement)?.ResolveTitheInjections(stockpile);
-            }
-
-            // 3. RESOLVE NEEDS (fair distribution from shared stockpile)
-            NeedResolver.ResolveSettlementNeedsFair(faction, stockpile);
-            DirtyFlowCache();
-
-            // 4. OVERFLOW
-            foreach (KeyValuePair<ResourceTypeDef, double> kv in totalOverflow)
-            {
-                if (kv.Value <= 0) continue;
-
-                float silver = FormulaUtil.OverflowSilver(kv.Value);
-                DistributeSilver(silver, kv.Key, contributions, faction);
-
-                LogSC.Message($"Overflow auto-sell: {kv.Value} {kv.Key.label} -> {silver} silver");
-            }
-
-            // 5. SELL ORDERS
+            // Deposits, needs, dormancy, and tithe injection now run daily in PostDailyAccrual.
+            // The tax tick only liquidates voluntary sell orders against the shared stockpile.
             foreach (SellOrder order in globalSellOrders)
             {
                 float silver = order.Execute(stockpile);
@@ -738,45 +673,18 @@ namespace FactionColonies.SupplyChain
                     LogSC.Message($"Sell order: {order.amountPerPeriod} {order.resource.label} -> {silver} silver");
                 }
             }
-            capsAndStockpilesDirty = false;
         }
 
         private void PreTaxResolution_Complex(FactionFC faction)
         {
-            // Sync auto-max allocations to current production before reading any allocation values.
-            foreach (WorldSettlementFC settlement in faction.settlements)
-                GetComp(settlement)?.SyncAllAutoMaxAllocations();
+            // Deposits, needs, dormancy, and tithe injection now run daily in PostDailyAccrual.
+            // The tax tick resolves routes (inventory movement), the trade network, a cap-safety
+            // overflow sweep after deliveries, and per-settlement sell orders.
 
-            // 1. Recalculate local caps (only if buildings changed)
+            // Refresh local caps (only if buildings changed) before routes move inventory.
             foreach (WorldSettlementFC settlement in faction.settlements)
             {
                 GetComp(settlement)?.RecalculateLocalCapsIfDirty();
-            }
-
-            // 2. ACCUMULATE to local stockpiles
-            foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                WorldObjectComp_SupplyChain comp = GetComp(settlement);
-                if (comp is null) continue;
-
-                IStockpile localStockpile = comp.GetStockpile();
-                if (localStockpile is null) continue;
-
-                foreach (ResourceFC resource in settlement.Resources)
-                {
-                    double allocated = comp.GetAllocation(resource.def);
-                    if (allocated <= 0) continue;
-
-                    double excess = localStockpile.Credit(resource.def, allocated);
-
-                    // Overflow: auto-sell excess at penalty rate (pool resources cap silently)
-                    if (excess > 0 && !resource.def.isPoolResource)
-                    {
-                        float silver = FormulaUtil.OverflowSilver(excess);
-                        settlement.AddOneTimeSilverIncome(silver);
-                        LogSC.Message($"Local overflow at {settlement.Name}: {excess} {resource.def.label} -> {silver} silver");
-                    }
-                }
             }
 
             // 3. RESOLVE ROUTES (ordered by priority)
@@ -870,30 +778,6 @@ namespace FactionColonies.SupplyChain
                 netComp.SetNetworkInfo(partners, hub);
             }
 
-            // 4. RESOLVE TITHE INJECTIONS (draw from local stockpiles, set externalTitheBudget)
-            foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                WorldObjectComp_SupplyChain titheComp = GetComp(settlement);
-                if (titheComp is null) continue;
-
-                IStockpile titheStockpile = titheComp.GetStockpile();
-                if (titheStockpile is null) continue;
-
-                titheComp.ResolveTitheInjections(titheStockpile);
-            }
-
-            // 5. RESOLVE NEEDS (per-settlement, from local stockpiles)
-            foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                WorldObjectComp_SupplyChain dataComp = GetComp(settlement);
-                WorldObjectComp_SettlementNeeds needComp = SupplyChainCache.GetNeedsComp(settlement);
-                if (dataComp is null || needComp is null) continue;
-
-                IStockpile needStockpile = dataComp.GetStockpile();
-                if (needStockpile is null) continue;
-
-                NeedResolver.ResolveSettlementNeeds(settlement, needStockpile, needComp);
-            }
             DirtyFlowCache();
 
             // 6. PER-SETTLEMENT OVERFLOW (anything over cap after route transfers)
@@ -972,33 +856,93 @@ namespace FactionColonies.SupplyChain
                 silverAmount = (int)(silverAmount * mult);
         }
 
-        private void DistributeSilver(float silver, ResourceTypeDef resource,
-            Dictionary<ResourceTypeDef, Dictionary<WorldSettlementFC, double>> contributions,
-            FactionFC faction)
+        // --- IDailyAccrualParticipant ---
+
+        /// <summary>
+        /// Runs once per day after every settlement has accrued the day's production and the
+        /// per-allocation realize() deposits have landed (produce-then-consume). Consumes from the
+        /// now-filled stockpile: settlement/comp needs (proportional), per-building dormancy
+        /// (all-or-nothing), and tithe injection — then re-syncs auto-max so tomorrow's deposit
+        /// tracks today's production rate (the one-day predictive lag matching dormancy/tithe).
+        /// </summary>
+        public void PostDailyAccrual(FactionFC faction)
         {
-            Dictionary<WorldSettlementFC, double> contribMap;
-            if (!contributions.TryGetValue(resource, out contribMap) || contribMap.Count == 0)
+            if (faction is null) return;
+            if (mode == SupplyChainMode.Simple)
+                DailyConsume_Simple(faction);
+            else
+                DailyConsume_Complex(faction);
+        }
+
+        private void DailyConsume_Simple(FactionFC faction)
+        {
+            EnsureCapsAndStockpiles();
+
+            // No trade network in Simple mode — clear any stale network info.
+            foreach (WorldSettlementFC settlement in faction.settlements)
+                GetComp(settlement)?.SetNetworkInfo(0, 0);
+
+            // 1. Settlement + comp needs (proportional draw from the shared stockpile).
+            NeedResolver.ResolveSettlementNeedsFair(faction, stockpile);
+
+            // 2. Per-building dormancy (all-or-nothing; deterministic settlement + slot order).
+            foreach (WorldSettlementFC settlement in faction.settlements)
             {
-                DistributeSilverEvenly(silver, faction);
-                return;
+                WorldObjectComp_SettlementNeeds needComp = SupplyChainCache.GetNeedsComp(settlement);
+                bool inGrace = needComp != null && !needComp.HasCompletedFirstTax;
+                NeedResolver.ResolveBuildingDormancy(settlement, stockpile, inGrace);
             }
 
-            double totalContrib = 0;
-            foreach (double v in contribMap.Values)
-                totalContrib += v;
+            // 3. Tithe injection (per-day draw).
+            foreach (WorldSettlementFC settlement in faction.settlements)
+                GetComp(settlement)?.ResolveTitheInjections(stockpile);
 
-            if (totalContrib <= 0)
-            {
-                DistributeSilverEvenly(silver, faction);
-                return;
-            }
+            // 4. Re-sync auto-max allocations to current production for tomorrow's deposit.
+            foreach (WorldSettlementFC settlement in faction.settlements)
+                GetComp(settlement)?.SyncAllAutoMaxAllocations();
 
-            foreach (KeyValuePair<WorldSettlementFC, double> kv in contribMap)
+            DirtyFlowCache();
+        }
+
+        private void DailyConsume_Complex(FactionFC faction)
+        {
+            foreach (WorldSettlementFC settlement in faction.settlements)
             {
-                float share = silver * (float)(kv.Value / totalContrib);
-                if (share > 0)
-                    kv.Key.AddOneTimeSilverIncome(share);
+                WorldObjectComp_SupplyChain dataComp = GetComp(settlement);
+                if (dataComp is null) continue;
+
+                IStockpile local = dataComp.EnsureLocalStockpile();
+                if (local is null) continue;
+
+                WorldObjectComp_SettlementNeeds needComp = SupplyChainCache.GetNeedsComp(settlement);
+                bool inGrace = needComp != null && !needComp.HasCompletedFirstTax;
+
+                // 1. Settlement + comp needs (proportional draw from the local stockpile).
+                if (needComp != null)
+                    NeedResolver.ResolveSettlementNeeds(settlement, local, needComp);
+
+                // 2. Per-building dormancy (all-or-nothing; deterministic slot order).
+                NeedResolver.ResolveBuildingDormancy(settlement, local, inGrace);
+
+                // 3. Tithe injection (per-day draw).
+                dataComp.ResolveTitheInjections(local);
+
+                // 4. Re-sync auto-max allocations for tomorrow's deposit.
+                dataComp.SyncAllAutoMaxAllocations();
             }
+            DirtyFlowCache();
+        }
+
+        /// <summary>
+        /// Deposits a per-day production amount into the shared faction stockpile (Simple mode),
+        /// returning the over-cap excess. Caps are refreshed lazily here so the daily realize()
+        /// deposits clamp correctly. Called by WorldObjectComp_SupplyChain.Realize.
+        /// </summary>
+        public double CreditFaction(ResourceTypeDef def, double amount)
+        {
+            if (def is null || amount <= 0) return 0;
+            EnsureCapsAndStockpiles();
+            return stockpile != null ? stockpile.Credit(def, amount) : amount;
         }
 
         private void DistributeSilverEvenly(float silver, FactionFC faction)

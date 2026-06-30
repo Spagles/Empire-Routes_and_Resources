@@ -35,11 +35,14 @@ namespace FactionColonies.SupplyChain
         // Manual value snapshot taken when auto-max is enabled; restored when the player turns it off.
         private Dictionary<ResourceTypeDef, double> autoMaxFallback = new Dictionary<ResourceTypeDef, double>();
 
-        // Tithe injection: how many stockpile units per resource to convert to tithe budget
+        // Tithe injection: how many stockpile units per resource per day to convert to tithe budget
         private Dictionary<ResourceTypeDef, double> titheInjections = new Dictionary<ResourceTypeDef, double>();
-        // At tax time, stores actual drawn amounts (may be less than configured if stockpile insufficient)
-        private Dictionary<ResourceTypeDef, double> actualTitheDrawn = new Dictionary<ResourceTypeDef, double>();
-        private bool isTaxTime;
+        // Stores the actual amount drawn in the most recent daily consume step (may be less than
+        // configured if the stockpile was short). Read by GetDailyExternalTitheBudget. Transient.
+        private Dictionary<ResourceTypeDef, double> lastTitheDrawn = new Dictionary<ResourceTypeDef, double>();
+        // Per-resource consecutive-shortfall day counter for owner-initiated allocation self-reduction. Transient.
+        private Dictionary<ResourceTypeDef, int> shortfallDays = new Dictionary<ResourceTypeDef, int>();
+        private const int SHORTFALL_REDUCE_DAYS = 5;
 
         // Complex mode fields
         private Dictionary<ResourceTypeDef, double> localStockpiles = new Dictionary<ResourceTypeDef, double>();
@@ -89,6 +92,19 @@ namespace FactionColonies.SupplyChain
             if (localCaps is null)
                 localCaps = new Dictionary<ResourceTypeDef, double>();
             localStockpileDict = new DictionaryStockpile(localStockpiles, localCaps);
+        }
+
+        /// <summary>
+        /// Complex mode: returns the local stockpile, lazily creating the wrapper (and refreshing
+        /// caps) if it hasn't been initialized yet. The wrapper is transient (not serialized), so
+        /// after a load the daily realize() deposit may be the first thing to touch it.
+        /// </summary>
+        public IStockpile EnsureLocalStockpile()
+        {
+            RecalculateLocalCapsIfDirty();
+            if (localStockpileDict is null)
+                InitLocalStockpile();
+            return localStockpileDict;
         }
 
         /// <summary>
@@ -243,19 +259,18 @@ namespace FactionColonies.SupplyChain
 
         // --- ITitheBudgetModifier ---
 
-        public double GetExternalTitheBudget(ResourceFC resource)
+        /// <summary>
+        /// Pure getter: the per-resource silver value drawn in the most recent daily consume step.
+        /// Sampled daily by the base mod and accrued; reports the previous day's draw (a harmless
+        /// one-day lag, since the cycle's accrued external budget is the sum of daily draws either way).
+        /// </summary>
+        public double GetDailyExternalTitheBudget(ResourceFC resource)
         {
             if (resource?.def is null || !resource.def.CanTithe)
                 return 0;
 
-            // At tax time, use actual drawn amounts; otherwise use configured injection (optimistic)
-            if (isTaxTime)
-            {
-                return actualTitheDrawn.TryGetValue(resource.def, out double drawn) ? drawn * FCSettings.silverPerResource : 0;
-            }
-
-            return titheInjections.TryGetValue(resource.def, out double injection) && injection > 0
-                ? injection * FCSettings.silverPerResource
+            return lastTitheDrawn.TryGetValue(resource.def, out double drawn)
+                ? drawn * FCSettings.silverPerResource
                 : 0;
         }
 
@@ -294,13 +309,13 @@ namespace FactionColonies.SupplyChain
         }
 
         /// <summary>
-        /// Called by WorldComponent_SupplyChain during PreTaxResolution.
-        /// Draws from the stockpile and records actual amounts for GetExternalTitheBudget.
+        /// Called daily by WorldComponent_SupplyChain.PostDailyAccrual. Draws this day's tithe
+        /// injection (per-day units) from the stockpile and records actual amounts for
+        /// GetDailyExternalTitheBudget (read the following day).
         /// </summary>
         public void ResolveTitheInjections(IStockpile stockpile)
         {
-            actualTitheDrawn.Clear();
-            isTaxTime = true;
+            lastTitheDrawn.Clear();
             WorldSettlementFC ws = WorldSettlement;
 
             foreach (KeyValuePair<ResourceTypeDef, double> kv in titheInjections)
@@ -310,7 +325,7 @@ namespace FactionColonies.SupplyChain
                 stockpile.TryDraw(kv.Key, kv.Value, out double drawn);
 
                 if (drawn > 0)
-                    actualTitheDrawn[kv.Key] = drawn;
+                    lastTitheDrawn[kv.Key] = drawn;
 
                 string settleName = ws?.Name ?? "unknown";
                 if (SupplyChainSettings.PrintDebug)
@@ -332,14 +347,12 @@ namespace FactionColonies.SupplyChain
         }
 
         /// <summary>
-        /// Called after tax resolution completes to reset the tax-time flag. Also ends the
-        /// founding grace period on the settlement-needs comp (which owns hasCompletedFirstTax),
-        /// so the single orchestrator call site covers both subsystems.
+        /// Called after tax resolution completes. Ends the founding grace period on the
+        /// settlement-needs comp (which owns hasCompletedFirstTax), so the single orchestrator
+        /// call site covers both subsystems. (lastTitheDrawn persists as the most-recent daily draw.)
         /// </summary>
         public void PostTaxCleanup()
         {
-            isTaxTime = false;
-            actualTitheDrawn.Clear();
             SupplyChainCache.GetNeedsComp(WorldSettlement)?.MarkFirstTaxComplete();
         }
 
@@ -362,8 +375,10 @@ namespace FactionColonies.SupplyChain
         }
 
         /// <summary>
-        /// Returns the headroom this comp can claim for the given resource if its current
-        /// registered amount were ignored: rawProduction minus other submods' allocations.
+        /// Returns the per-day headroom this comp can claim for the given resource if its current
+        /// registered amount were ignored: per-day rawProduction minus other submods' per-day
+        /// allocations. Under the daily-cadence base mod both terms are per-day, so the comparison
+        /// is per-day-vs-per-day (the latent cross-scale inconsistency the rework fixed).
         /// </summary>
         private double LiveMaxFor(ResourceFC resource)
         {
@@ -400,7 +415,7 @@ namespace FactionColonies.SupplyChain
                 return;
             }
 
-            bool ok = resource.SetStockpileAllocation(key, live, () => OnEvicted(def));
+            bool ok = resource.SetStockpileAllocation(key, live, (req, act) => Realize(def, req, act));
             if (ok)
             {
                 allocations[def] = live;
@@ -461,7 +476,7 @@ namespace FactionColonies.SupplyChain
                 return true;
             }
 
-            bool ok = resource.SetStockpileAllocation(key, amount, () => OnEvicted(def));
+            bool ok = resource.SetStockpileAllocation(key, amount, (req, act) => Realize(def, req, act));
             if (ok)
             {
                 allocations[def] = amount;
@@ -470,12 +485,67 @@ namespace FactionColonies.SupplyChain
             return ok;
         }
 
-        private void OnEvicted(ResourceTypeDef def)
+        /// <summary>
+        /// Per-day deposit callback fired by the base mod for each registered allocation, with
+        /// (requested, actual) where actual = min(allocation, that day's production). Deposits
+        /// <paramref name="actual"/> into the target stockpile (Simple: faction; Complex: local),
+        /// auto-sells any over-cap overflow, and tracks sustained shortfall. The base mod never
+        /// evicts — a persistently unfillable manual allocation self-reduces here (owner-initiated).
+        /// </summary>
+        public void Realize(ResourceTypeDef def, double requested, double actual)
         {
-            allocations.Remove(def);
-            WorldSettlementFC ws = WorldSettlement;
-            string name = ws?.Name ?? "unknown";
-            LogSC.Warning($"Stockpile allocation for {def.label} at {name} was evicted due to insufficient production.");
+            if (def is null) return;
+
+            if (actual > 0)
+            {
+                WorldComponent_SupplyChain wc = SupplyChainCache.Comp;
+                double excess;
+                if (wc != null && wc.Mode == SupplyChainMode.Simple)
+                {
+                    excess = wc.CreditFaction(def, actual);
+                }
+                else
+                {
+                    excess = EnsureLocalStockpile().Credit(def, actual);
+                }
+
+                // Daily overflow auto-sell (pool resources cap silently — no auto-sell)
+                if (excess > 0 && !def.isPoolResource)
+                {
+                    float silver = FormulaUtil.OverflowSilver(excess);
+                    WorldSettlement?.AddOneTimeSilverIncome(silver);
+                }
+            }
+
+            TrackShortfall(def, requested, actual);
+        }
+
+        /// <summary>
+        /// Counts consecutive days a (non-auto-max) allocation under-delivers and, once the
+        /// shortfall persists past SHORTFALL_REDUCE_DAYS, reduces the allocation to what actually
+        /// flowed. Auto-max allocations re-sync on their own, so they are left alone.
+        /// </summary>
+        private void TrackShortfall(ResourceTypeDef def, double requested, double actual)
+        {
+            const double EPS = 0.01;
+            if (requested - actual <= EPS || autoMaxResources.Contains(def))
+            {
+                shortfallDays.Remove(def);
+                return;
+            }
+
+            shortfallDays.TryGetValue(def, out int days);
+            days++;
+            if (days >= SHORTFALL_REDUCE_DAYS)
+            {
+                shortfallDays.Remove(def);
+                LogSC.Message($"Reducing persistently-short allocation for {def.label} at {WorldSettlement?.Name ?? "unknown"} to {actual:F1}/day.");
+                SetAllocation(def, actual);
+            }
+            else
+            {
+                shortfallDays[def] = days;
+            }
         }
 
         /// <summary>
@@ -513,7 +583,8 @@ namespace FactionColonies.SupplyChain
                 }
 
                 string key = ALLOC_KEY_PREFIX + kv.Key.defName;
-                bool ok = resource.SetStockpileAllocation(key, clamped, () => OnEvicted(kv.Key));
+                ResourceTypeDef capturedDef = kv.Key;
+                bool ok = resource.SetStockpileAllocation(key, clamped, (req, act) => Realize(capturedDef, req, act));
                 if (!ok)
                 {
                     if (toRemove is null) toRemove = new List<ResourceTypeDef>();

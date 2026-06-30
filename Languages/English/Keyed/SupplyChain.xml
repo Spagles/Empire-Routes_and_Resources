@@ -26,6 +26,7 @@
     <SC_AddColon>Add:</SC_AddColon>
     <SC_PickResource>Pick resource...</SC_PickResource>
     <SC_UnitsPerPeriod>{0} units/period</SC_UnitsPerPeriod>
+    <SC_UnitsPerDay>{0} units/day</SC_UnitsPerDay>
     <SC_ExpectedSilver>~{0} silver</SC_ExpectedSilver>
     <SC_SupplyRoutes>Supply Routes</SC_SupplyRoutes>
 
@@ -110,7 +111,7 @@
 
     <!-- Tithe Injection -->
     <SC_TitheInjection>Tithe Injection</SC_TitheInjection>
-    <SC_TitheInjectionTooltip>Tithe injection converts stockpiled resources into additional tithe budget.\n\nConfigured amounts are drawn from the stockpile each tax period. The budget raises the tithe cap for that resource, letting you choose what items to receive via the tithe menu.\n\nIf the stockpile doesn't have enough, only what's available is injected.</SC_TitheInjectionTooltip>
+    <SC_TitheInjectionTooltip>Tithe injection converts stockpiled resources into additional tithe budget.\n\nConfigured amounts are drawn from the stockpile each day. The budget raises the tithe cap for that resource, letting you choose what items to receive via the tithe menu.\n\nIf the stockpile doesn't have enough, only what's available is injected.</SC_TitheInjectionTooltip>
     <SC_TitheInjectionPerSettlement>Configure tithe injections per settlement in the settlement Supply Chain tab.</SC_TitheInjectionPerSettlement>
     <SC_NoTitheInjections>No tithe injections configured.</SC_NoTitheInjections>
     <SC_TitheBudgetValue>+{0} silver tithe budget</SC_TitheBudgetValue>
@@ -131,7 +132,7 @@
     <SC_BuildingNeeds>Building Needs</SC_BuildingNeeds>
     <SC_BuildingStockpileBonuses>Stockpile Bonuses</SC_BuildingStockpileBonuses>
     <SC_BuildingSupplyChain>Supply Chain</SC_BuildingSupplyChain>
-    <SC_BuildingNeedInput>{0}× {1} per tax period</SC_BuildingNeedInput>
+    <SC_BuildingNeedInput>{0}× {1} per day</SC_BuildingNeedInput>
     <SC_BuildingCapBonus>+{0} {1} stockpile cap</SC_BuildingCapBonus>
     <SC_BuildingNeedCardNeeds>Needs: {0}</SC_BuildingNeedCardNeeds>
     <SC_BuildingNeedCardCap>Cap: {0}</SC_BuildingNeedCardCap>

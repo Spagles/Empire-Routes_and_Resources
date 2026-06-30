@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_0</defName>
+		<label>Daily Cadence Update</label>
+		<description>Updates the mod to match the new daily production cadence in the base Empire Refactored mod.</description>
+		<releaseDate>2026-06-30</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>Numerous changes to make stockpiling work on a daily cadence. Routes (complex mode) still work on a tax-cycle cadence.</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
+</Defs>

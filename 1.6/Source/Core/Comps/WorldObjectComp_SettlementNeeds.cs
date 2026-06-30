@@ -112,27 +112,10 @@ namespace FactionColonies.SupplyChain
                 });
             }
 
-            // 2. Building needs (from BuildingNeedExtension)
-            if (ws.BuildingsComp != null)
-            {
-                foreach (BuildingFC building in ws.BuildingsComp.Buildings)
-                {
-                    if (building.def is null || building.def == BuildingFCDefOf.Empty) continue;
-                    BuildingNeedExtension ext = SupplyChainCache.GetBuildingNeedExt(building.def);
-                    if (ext?.inputs is null) continue;
-                    foreach (BuildingResourceInput input in ext.inputs)
-                    {
-                        if (input.resource is null || input.amount <= 0) continue;
-                        string needId = $"bldg.{building.def.defName}.{input.resource.defName}";
-                        string needLabel = $"{building.def.label.CapitalizeFirst()} - {input.resource.label.CapitalizeFirst()}";
-                        prevFulfilled.TryGetValue(needId, out double fulfilled);
-                        newStates.Add(new NeedState(needId, input.resource, input.amount, fulfilled,
-                            needLabel, NeedCategory.Building, ext.penalties));
-                    }
-                }
-            }
+            // Building inputs are not needs here — they drive per-building dormancy
+            // (BuildingFC.active), settled daily by NeedResolver.ResolveBuildingDormancy.
 
-            // 3. Comp-provided needs (from INeedProvider)
+            // 2. Comp-provided needs (from INeedProvider)
             foreach (WorldObjectComp comp in ws.AllComps)
             {
                 INeedProvider provider = comp as INeedProvider;

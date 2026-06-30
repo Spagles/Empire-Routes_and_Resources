@@ -633,7 +633,7 @@ namespace FactionColonies.SupplyChain
                 Widgets.Label(new Rect(cx + 24f, curY, 120f, 26f),
                     kv.Key.label.CapitalizeFirst());
                 Widgets.Label(new Rect(cx + 148f, curY, 130f, 26f),
-                    "SC_UnitsPerPeriod".Translate(kv.Value.ToString("F1")));
+                    "SC_UnitsPerDay".Translate(kv.Value.ToString("F1")));
 
                 double silverBudget = kv.Value * FCSettings.silverPerResource;
                 float xBtnX = titheRow.xMax - 28f;

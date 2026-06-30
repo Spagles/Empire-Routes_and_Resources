@@ -19,14 +19,14 @@ namespace FactionColonies.SupplyChain
 
     /// <summary>
     /// DefModExtension on BuildingFCDef. Declares resource inputs the building
-    /// consumes each tax period, and/or stockpile cap bonuses the building provides.
-    /// Unmet inputs apply penalties from the penalties list.
-    /// If penalties is null, a default small happiness penalty applies.
+    /// consumes each day, and/or stockpile cap bonuses the building provides.
+    /// A building whose inputs are not fully available goes dormant (produces nothing,
+    /// gives no stat bonus, costs no upkeep) via the base-mod BuildingFC.active flag —
+    /// there are no per-input stat penalties; dormancy is the consequence.
     /// </summary>
     public class BuildingNeedExtension : DefModExtension, IBuildingDetailSection
     {
         public List<BuildingResourceInput> inputs;
-        public List<NeedPenalty> penalties;
         public List<BuildingCapBonus> capBonuses;
 
         private bool hasInputs => inputs?.Count > 0;

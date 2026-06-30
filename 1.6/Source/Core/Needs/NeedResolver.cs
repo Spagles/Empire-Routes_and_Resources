@@ -11,7 +11,8 @@ namespace FactionColonies.SupplyChain
     public static class NeedResolver
     {
         /// <summary>
-        /// Resolves needs for a single settlement by drawing from the given stockpile.
+        /// Resolves Base + Comp needs for a single settlement by drawing from the given stockpile.
+        /// Building inputs are handled separately by ResolveBuildingDormancy (all-or-nothing).
         /// Used in Complex mode (each settlement draws from its own local stockpile).
         /// </summary>
         public static void ResolveSettlementNeeds(WorldSettlementFC settlement, IStockpile stockpile, WorldObjectComp_SettlementNeeds comp)
@@ -36,13 +37,10 @@ namespace FactionColonies.SupplyChain
                 });
             }
 
-            // 2. Building needs
-            ResolveBuildingNeeds(settlement, stockpile, states);
-
-            // 3. Comp-provided needs (e.g., specialist needs via INeedProvider)
+            // 2. Comp-provided needs (e.g., specialist needs via INeedProvider)
             ResolveCompNeeds(settlement, stockpile, states);
 
-            // 4. Compute surplus ratios (post-all-draws)
+            // 3. Compute surplus ratios (post-all-draws)
             foreach (NeedState state in states)
             {
                 if (state.surplusBonuses == null || state.demanded <= 0 || state.fulfilled < state.demanded)
@@ -98,35 +96,8 @@ namespace FactionColonies.SupplyChain
                     });
                 }
 
-                // Building needs
-                if (settlement.BuildingsComp != null)
-                {
-                    foreach (BuildingFC building in settlement.BuildingsComp.Buildings)
-                    {
-                        if (building.def == null || building.def == BuildingFCDefOf.Empty)
-                            continue;
-
-                        BuildingNeedExtension ext = SupplyChainCache.GetBuildingNeedExt(building.def);
-                        if (ext == null || ext.inputs == null) continue;
-
-                        foreach (BuildingResourceInput input in ext.inputs)
-                        {
-                            if (input.resource == null || input.amount <= 0) continue;
-
-                            allDemands.Add(new NeedDemandEntry
-                            {
-                                settlement = settlement,
-                                comp = comp,
-                                needId = "bldg." + building.def.defName + "." + input.resource.defName,
-                                resource = input.resource,
-                                demand = input.amount,
-                                label = building.def.label.CapitalizeFirst() + " - " + input.resource.label.CapitalizeFirst(),
-                                category = NeedCategory.Building,
-                                penalties = ext.penalties
-                            });
-                        }
-                    }
-                }
+                // Building inputs are NOT resolved here — they drive per-building dormancy
+                // (all-or-nothing) via ResolveBuildingDormancy, not the proportional need model.
 
                 // Comp-provided needs (e.g., specialist needs via INeedProvider)
                 foreach (WorldObjectComp woc in settlement.AllComps)
@@ -261,30 +232,59 @@ namespace FactionColonies.SupplyChain
             }
         }
 
-        private static void ResolveBuildingNeeds(WorldSettlementFC settlement, IStockpile stockpile, List<NeedState> states)
+        /// <summary>
+        /// Settles per-building dormancy for one settlement, drawing building inputs from the
+        /// given (post-deposit) stockpile. All-or-nothing per building instance: if the stockpile
+        /// holds ALL of a building's inputs in full, draw them and mark the building active;
+        /// otherwise draw nothing (inputs stay for others) and mark it dormant. Deterministic
+        /// slot order. During founding grace (<paramref name="inGrace"/>) buildings are never
+        /// toggled dormant — they stay active and only consume inputs that are fully available.
+        /// </summary>
+        public static void ResolveBuildingDormancy(WorldSettlementFC settlement, IStockpile stockpile, bool inGrace)
         {
-            if (settlement.BuildingsComp == null) return;
+            if (settlement?.BuildingsComp == null || stockpile == null) return;
 
-            foreach (BuildingFC building in settlement.BuildingsComp.Buildings)
+            WorldObjectComp_SettlementBuildings bComp = settlement.BuildingsComp;
+            List<BuildingFC> buildings = bComp.Buildings;
+
+            for (int slot = 0; slot < buildings.Count; slot++)
             {
-                if (building.def == null || building.def == BuildingFCDefOf.Empty)
+                BuildingFC building = buildings[slot];
+                if (building.def is null || building.def == BuildingFCDefOf.Empty)
                     continue;
 
                 BuildingNeedExtension ext = SupplyChainCache.GetBuildingNeedExt(building.def);
-                if (ext == null || ext.inputs == null) continue;
 
+                // Buildings with no inputs (e.g. cap-only) are always active.
+                if (ext?.inputs is null || ext.inputs.Count == 0)
+                {
+                    bComp.SetBuildingActive(slot, true);
+                    continue;
+                }
+
+                // Can the stockpile cover ALL of this building's inputs in full?
+                bool canAfford = true;
                 foreach (BuildingResourceInput input in ext.inputs)
                 {
-                    if (input.resource == null || input.amount <= 0) continue;
-
-                    double drawn;
-                    stockpile.TryDraw(input.resource, input.amount, out drawn);
-
-                    string needId = "bldg." + building.def.defName + "." + input.resource.defName;
-                    string needLabel = building.def.label.CapitalizeFirst() + " - " + input.resource.label.CapitalizeFirst();
-                    states.Add(new NeedState(needId, input.resource, input.amount, drawn,
-                        needLabel, NeedCategory.Building, ext.penalties));
+                    if (input.resource is null || input.amount <= 0) continue;
+                    if (stockpile.GetAmount(input.resource) < input.amount)
+                    {
+                        canAfford = false;
+                        break;
+                    }
                 }
+
+                if (canAfford)
+                {
+                    foreach (BuildingResourceInput input in ext.inputs)
+                    {
+                        if (input.resource is null || input.amount <= 0) continue;
+                        stockpile.TryDraw(input.resource, input.amount, out _);
+                    }
+                }
+
+                // Never toggle dormant during founding grace.
+                bComp.SetBuildingActive(slot, inGrace || canAfford);
             }
         }
 
