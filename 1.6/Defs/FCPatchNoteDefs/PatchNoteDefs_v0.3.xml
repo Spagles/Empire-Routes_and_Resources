@@ -13,4 +13,19 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_1</defName>
+		<label>Daily Cadence Fixes</label>
+		<description>Fixes a few issues lingering after the Daily Cadence update.</description>
+		<releaseDate>2026-06-30</releaseDate>
+		<patchNoteType>Patch</patchNoteType>
+		<patchNoteLines>
+		<li>Seperate daily calculations (production, needs, stockpiling) from tax cycle-level calculations (routes, sell orders) in the UI</li>
+		<li>Bugfix: rounding issues could create situations where a seemingly maxed-out production allocation slider produced constant clicking noises</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
