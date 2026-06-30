@@ -85,7 +85,7 @@ namespace FactionColonies.SupplyChain
     }
 
     /// <summary>
-    /// Defines a base settlement need that consumes resources from the stockpile each tax period.
+    /// Defines a base settlement need that consumes resources from the stockpile each day.
     /// Unmet needs apply stat penalties proportional to the satisfaction deficit. A need can
     /// draw from multiple resources at once with tech-level-weighted splits.
     /// </summary>

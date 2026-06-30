@@ -26,7 +26,8 @@ namespace FactionColonies.SupplyChain
             string tip = def.label.CapitalizeFirst() + ": " + amt.ToString("F1") + " / " + cap.ToString("F0")
                 + "\n-----";
 
-            double net = flow.Net;
+            // --- Daily section: production, needs, and tithe injection all resolve per day ---
+            double net = flow.DailyNet;
             if (net > 0.01)
                 tip += "\n" + (string)"SC_BarNetPositive".Translate(net.ToString("F1"));
             else if (net < -0.01)
@@ -36,8 +37,6 @@ namespace FactionColonies.SupplyChain
 
             if (flow.production > 0)
                 tip += "\n" + (string)"SC_BarFlowProduction".Translate(flow.production.ToString("F1"));
-            if (flow.routeIn > 0)
-                tip += "\n" + (string)"SC_BarFlowRouteIn".Translate(flow.routeIn.ToString("F1"));
             if (flow.baseNeeds > 0)
                 tip += "\n" + (string)"SC_BarFlowBaseNeeds".Translate(flow.baseNeeds.ToString("F1"));
             if (flow.buildingNeeds > 0)
@@ -54,12 +53,20 @@ namespace FactionColonies.SupplyChain
             {
                 tip += "\n" + (string)"SC_BarFlowCompNeedLine".Translate("Other", flow.compNeeds.ToString("F1"));
             }
-            if (flow.routeOut > 0)
-                tip += "\n" + (string)"SC_BarFlowRouteOut".Translate(flow.routeOut.ToString("F1"));
-            if (flow.sellOrders > 0)
-                tip += "\n" + (string)"SC_BarFlowSellOrders".Translate(flow.sellOrders.ToString("F1"));
             if (flow.titheInjection > 0)
                 tip += "\n" + (string)"SC_BarFlowTitheInjection".Translate(flow.titheInjection.ToString("F1"));
+
+            // --- Per-tax-cycle section: routes and sell orders resolve once per cycle ---
+            if (flow.routeIn > 0 || flow.routeOut > 0 || flow.sellOrders > 0)
+            {
+                tip += "\n" + (string)"SC_BarFlowCycleHeader".Translate();
+                if (flow.routeIn > 0)
+                    tip += "\n" + (string)"SC_BarFlowRouteIn".Translate(flow.routeIn.ToString("F1"));
+                if (flow.routeOut > 0)
+                    tip += "\n" + (string)"SC_BarFlowRouteOut".Translate(flow.routeOut.ToString("F1"));
+                if (flow.sellOrders > 0)
+                    tip += "\n" + (string)"SC_BarFlowSellOrders".Translate(flow.sellOrders.ToString("F1"));
+            }
 
             if (numSettlements > 0)
             {

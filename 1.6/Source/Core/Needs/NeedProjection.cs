@@ -29,9 +29,12 @@ namespace FactionColonies.SupplyChain
             IStockpile stockpile = comp.GetStockpile();
             double currentAmount = stockpile != null ? stockpile.GetAmount(resource) : 0;
 
-            // availableForNeeds = currentStockpile + (all inflows) - (all outflows except needs)
-            // Algebraically: currentStockpile + flow.Net + flow.needs
-            double available = currentAmount + flow.Net + flow.needs;
+            // Daily-net basis: availableForNeeds = currentStockpile + the daily inflow available
+            // to needs (production diverted in - tithe drawn). Algebraically that is
+            // currentStockpile + flow.DailyNet + flow.needs. Routes, sell orders, and buy orders are
+            // per-tax-cycle stockpile changes already reflected in currentAmount when they fire, so
+            // they are deliberately NOT projected as a continuous daily flow.
+            double available = currentAmount + flow.DailyNet + flow.needs;
             double rate = available / flow.needs;
 
             return (float)Math.Max(0.0, Math.Min(1.0, rate));
@@ -56,7 +59,7 @@ namespace FactionColonies.SupplyChain
             IStockpile stockpile = wc.Stockpile;
             double currentAmount = stockpile != null ? stockpile.GetAmount(resource) : 0;
 
-            double available = currentAmount + flow.Net + flow.needs;
+            double available = currentAmount + flow.DailyNet + flow.needs;
             double rate = available / flow.needs;
 
             return (float)Math.Max(0.0, Math.Min(1.0, rate));

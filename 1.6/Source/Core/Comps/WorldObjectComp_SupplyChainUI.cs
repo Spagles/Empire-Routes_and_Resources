@@ -221,7 +221,7 @@ namespace FactionColonies.SupplyChain
                 if (wc != null && ws != null)
                     flow = wc.GetCachedFlow(ws, Ledger, def);
 
-                string netStr = flow.Net >= 0 ? "(+" + flow.Net.ToString("F1") + ")" : "(" + flow.Net.ToString("F1") + ")";
+                string netStr = flow.DailyNet >= 0 ? "(+" + flow.DailyNet.ToString("F1") + ")" : "(" + flow.DailyNet.ToString("F1") + ")";
                 string label = amount.ToString("F1") + netStr;
                 float cellW = StatusIconSize + 2f + Text.CalcSize(label).x + StatusCellPad;
 
@@ -268,7 +268,7 @@ namespace FactionColonies.SupplyChain
                     flow = wc.GetCachedFlow(ws, Ledger, def);
 
                 string amtStr = amount.ToString("F1");
-                string netStr = flow.Net >= 0 ? "(+" + flow.Net.ToString("F1") + ")" : "(" + flow.Net.ToString("F1") + ")";
+                string netStr = flow.DailyNet >= 0 ? "(+" + flow.DailyNet.ToString("F1") + ")" : "(" + flow.DailyNet.ToString("F1") + ")";
                 float amtW = Text.CalcSize(amtStr).x;
                 float netW = Text.CalcSize(netStr).x;
                 float cellW = StatusIconSize + 2f + amtW + netW + StatusCellPad;
@@ -291,8 +291,8 @@ namespace FactionColonies.SupplyChain
                 Widgets.Label(amtRect, amtStr);
 
                 // Net change text (colored)
-                Color netColor = flow.Net > 0.01 ? AccentUtil.Income
-                    : flow.Net < -0.01 ? AccentUtil.Expense
+                Color netColor = flow.DailyNet > 0.01 ? AccentUtil.Income
+                    : flow.DailyNet < -0.01 ? AccentUtil.Expense
                     : StatusNetStable;
                 GUI.color = netColor;
                 Rect netRect = new Rect(amtRect.xMax, curY, netW, StatusRowH);
@@ -419,10 +419,10 @@ namespace FactionColonies.SupplyChain
 
                 // Row highlight: alternating gray + flow-based red/green
                 if (idx % 2 == 0) Widgets.DrawHighlight(rowRect);
-                UIUtilSC.DrawFlowHighlight(rowRect, flow.Net);
+                UIUtilSC.DrawFlowHighlight(rowRect, flow.DailyNet);
 
                 // Left accent bar (colored by flow)
-                Color accentColor = flow.Net > 0.01 ? AccentPositive : flow.Net < -0.01 ? AccentNegative : AccentNeutral;
+                Color accentColor = flow.DailyNet > 0.01 ? AccentPositive : flow.DailyNet < -0.01 ? AccentNegative : AccentNeutral;
                 Widgets.DrawBoxSolid(new Rect(0f, curY, AccentW, barHeight), accentColor);
 
                 if (def.Icon != null)
@@ -439,13 +439,13 @@ namespace FactionColonies.SupplyChain
 
                 // Arrow indicator (between bar and amount text)
                 float arrowX = barRect.xMax + 2f;
-                if (flow.Net > 0.01)
+                if (flow.DailyNet > 0.01)
                 {
                     GUI.color = AccentUtil.Income;
                     GUI.DrawTexture(new Rect(arrowX, curY + (barHeight - arrowSize) / 2f, arrowSize, arrowSize), TexUI.ArrowTexRight);
                     GUI.color = Color.white;
                 }
-                else if (flow.Net < -0.01)
+                else if (flow.DailyNet < -0.01)
                 {
                     GUI.color = AccentUtil.Expense;
                     GUI.DrawTexture(new Rect(arrowX, curY + (barHeight - arrowSize) / 2f, arrowSize, arrowSize), TexUI.ArrowTexLeft);

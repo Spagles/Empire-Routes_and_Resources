@@ -366,7 +366,11 @@ namespace FactionColonies.SupplyChain
             public double sellOrders;
             public double titheInjection;
             public double needs => baseNeeds + buildingNeeds + compNeeds;
-            public double Net => production + routeIn - needs - routeOut - sellOrders - titheInjection;
+            // The single net used everywhere: need fill-rate projection, the displayed net, and
+            // cell coloring. Daily terms only (diverted production in, needs + tithe out). Routes
+            // and sell orders are per-tax-cycle stockpile events, surfaced separately in the
+            // tooltip's "Per tax cycle" section, and are never folded into this rate.
+            public double DailyNet => production - needs - titheInjection;
         }
 
         internal FlowBreakdown GetCachedFlow(WorldSettlementFC settlement, WorldObjectComp_SupplyChain comp, ResourceTypeDef def)
@@ -1170,11 +1174,11 @@ namespace FactionColonies.SupplyChain
 
                 Rect rowRect = new Rect(0f, drawY, viewRect.width, barHeight);
                 if (resIdx % 2 == 0) Widgets.DrawHighlight(rowRect);
-                UIUtilSC.DrawFlowHighlight(rowRect, simpleFlow.Net);
+                UIUtilSC.DrawFlowHighlight(rowRect, simpleFlow.DailyNet);
 
                 // Left accent bar colored by flow
-                Color accentColor = simpleFlow.Net > 0.01 ? AccentUtil.Income
-                    : simpleFlow.Net < -0.01 ? AccentUtil.Expense : Color.gray;
+                Color accentColor = simpleFlow.DailyNet > 0.01 ? AccentUtil.Income
+                    : simpleFlow.DailyNet < -0.01 ? AccentUtil.Expense : Color.gray;
                 Widgets.DrawBoxSolid(new Rect(0f, drawY, accentW, barHeight), accentColor);
 
                 if (def.Icon != null)
@@ -1192,13 +1196,13 @@ namespace FactionColonies.SupplyChain
 
                 // Arrow indicator (between bar and amount text)
                 float arrowX = barRect.xMax + 2f;
-                if (simpleFlow.Net > 0.01)
+                if (simpleFlow.DailyNet > 0.01)
                 {
                     GUI.color = AccentUtil.Income;
                     GUI.DrawTexture(new Rect(arrowX, drawY + (barHeight - arrowSize) / 2f, arrowSize, arrowSize), TexUI.ArrowTexRight);
                     GUI.color = Color.white;
                 }
-                else if (simpleFlow.Net < -0.01)
+                else if (simpleFlow.DailyNet < -0.01)
                 {
                     GUI.color = AccentUtil.Expense;
                     GUI.DrawTexture(new Rect(arrowX, drawY + (barHeight - arrowSize) / 2f, arrowSize, arrowSize), TexUI.ArrowTexLeft);
@@ -1210,7 +1214,7 @@ namespace FactionColonies.SupplyChain
                     "SC_StockpileAmount".Translate(amount.ToString("F1"), cap.ToString("F0")));
 
                 // Net flow readout
-                double net = simpleFlow.Net;
+                double net = simpleFlow.DailyNet;
                 if (net > 0.01 || net < -0.01)
                 {
                     Text.Anchor = TextAnchor.MiddleRight;
@@ -1361,9 +1365,9 @@ namespace FactionColonies.SupplyChain
                         Widgets.Label(new Rect(cx + 228f, drawY, 100f, titheRowH),
                             kv.Key.label.CapitalizeFirst());
 
-                        // Units per period
+                        // Units per day
                         Widgets.Label(new Rect(cx + 334f, drawY, 130f, titheRowH),
-                            "SC_UnitsPerPeriod".Translate(kv.Value.ToString("F1")));
+                            "SC_UnitsPerDay".Translate(kv.Value.ToString("F1")));
 
                         // Budget value (blue tint)
                         double silverBudget = kv.Value * FCSettings.silverPerResource;
@@ -1551,9 +1555,9 @@ namespace FactionColonies.SupplyChain
                         IStockpile checkStockpile = comp.GetStockpile();
                         if (checkStockpile == null || checkStockpile.GetCap(flowDef) <= 0) continue;
                         FlowBreakdown flow = GetCachedFlow(settlement, comp, flowDef);
-                        if (flow.Net < -0.01)
+                        if (flow.DailyNet < -0.01)
                             hasDeficit = true;
-                        else if (flow.Net > 0.01)
+                        else if (flow.DailyNet > 0.01)
                             hasSurplus = true;
                     }
                     if (hasDeficit)
@@ -1599,7 +1603,7 @@ namespace FactionColonies.SupplyChain
                     FlowBreakdown flow = GetCachedFlow(settlement, comp, def);
 
                     // Flow highlight on cell background
-                    UIUtilSC.DrawFlowHighlight(cellRect, flow.Net);
+                    UIUtilSC.DrawFlowHighlight(cellRect, flow.DailyNet);
 
                     // Fill bar centered vertically in cell
                     float barY = curY + (settRowH - barH) / 2f;
@@ -1607,13 +1611,13 @@ namespace FactionColonies.SupplyChain
                     Widgets.FillableBar(barRect, fill);
 
                     // Arrow indicator (top-right corner of cell)
-                    if (flow.Net > 0.01)
+                    if (flow.DailyNet > 0.01)
                     {
                         GUI.color = AccentUtil.Income;
                         GUI.DrawTexture(new Rect(cellX + colW - arrowSize - 1f, curY + 1f, arrowSize, arrowSize), TexUI.ArrowTexRight);
                         GUI.color = Color.white;
                     }
-                    else if (flow.Net < -0.01)
+                    else if (flow.DailyNet < -0.01)
                     {
                         GUI.color = AccentUtil.Expense;
                         GUI.DrawTexture(new Rect(cellX + colW - arrowSize - 1f, curY + 1f, arrowSize, arrowSize), TexUI.ArrowTexLeft);
@@ -1824,7 +1828,7 @@ namespace FactionColonies.SupplyChain
                     {
                         ResourceFC res = s.GetResource(newRouteResource);
                         if (res != null)
-                            label += " (" + res.rawTotalProduction.ToString("F1") + "/period)";
+                            label += " (" + res.rawTotalProduction.ToString("F1") + "/day)";
                     }
                     options.Add(new FloatMenuOption(label, delegate { newRouteSource = captured; }));
                 }
@@ -1849,7 +1853,7 @@ namespace FactionColonies.SupplyChain
                             {
                                 double demand = needDef.CalculateDemand(captured)
                                     * needDef.GetResourceFraction(FindFC.TechLevel, newRouteResource);
-                                label += " (need: " + demand.ToString("F1") + "/period)";
+                                label += " (need: " + demand.ToString("F1") + "/day)";
                                 break;
                             }
                         }
