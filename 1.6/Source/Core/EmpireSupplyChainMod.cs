@@ -19,6 +19,7 @@ namespace FactionColonies.SupplyChain
         public static float routeDecayPerDay = 0.1f;
         public static int localCapBase = 50;
         public static bool animateRouteArrows = false;
+        public static bool useDeliveryCaravans = false;
         public static bool useMaxWorkersForNeeds = false;
         public static int freeSettlementThreshold = 3;
         public static float distanceNormalizingDays = DEFAULT_DISTANCE_NORMALIZING_DAYS;
@@ -50,6 +51,7 @@ namespace FactionColonies.SupplyChain
             Scribe_Values.Look(ref routeDecayPerDay, "routeDecayPerDay", 0.1f);
             Scribe_Values.Look(ref localCapBase, "localCapBase", 50);
             Scribe_Values.Look(ref animateRouteArrows, "animateRouteArrows", false);
+            Scribe_Values.Look(ref useDeliveryCaravans, "useDeliveryCaravans", false);
             Scribe_Values.Look(ref useMaxWorkersForNeeds, "useMaxWorkersForNeeds", false);
             Scribe_Values.Look(ref freeSettlementThreshold, "freeSettlementThreshold", 3);
             Scribe_Values.Look(ref distanceNormalizingDays, "distanceNormalizingDays", DEFAULT_DISTANCE_NORMALIZING_DAYS);
@@ -92,6 +94,10 @@ namespace FactionColonies.SupplyChain
             ls.Gap(12f);
 
             ls.CheckboxLabeled("SC_SettingsAnimateArrows".Translate(), ref animateRouteArrows);
+            ls.Gap(12f);
+
+            ls.CheckboxLabeled("SC_SettingsUseDeliveryCaravans".Translate(), ref useDeliveryCaravans,
+                "SC_SettingsUseDeliveryCaravansTip".Translate());
             ls.Gap(12f);
 
             ls.CheckboxLabeled("SC_SettingsUseMaxWorkers".Translate(), ref useMaxWorkersForNeeds);

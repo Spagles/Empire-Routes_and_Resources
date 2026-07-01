@@ -23,6 +23,9 @@ namespace FactionColonies.SupplyChain
         private List<PendingDelivery> pendingDeliveries = new List<PendingDelivery>();
         public List<PendingDelivery> PendingDeliveries => pendingDeliveries;
 
+        // Monotonic id source giving each PendingDelivery a stable unique load id (for the caravan cross-ref).
+        private int nextDeliveryId;
+
         // Route visualization (transient, not saved)
         public bool showAllRoutes;
         public bool showSelectedRoutes;
@@ -128,6 +131,7 @@ namespace FactionColonies.SupplyChain
             // recompute is a no-op on the stat cache when it matches (SetNetworkInfo early-out).
             if (mode == SupplyChainMode.Complex)
                 RebuildAllPartnerSets(FindFC.FactionComp);
+            ReconcileDeliveryCaravans();
 
             LogSC.MessageForce("WorldComponent_SupplyChain initialized (mode=" + mode + ", fromLoad=" + fromLoad + ")");
         }
@@ -288,6 +292,7 @@ namespace FactionColonies.SupplyChain
             Scribe_Collections.Look(ref supplyRoutes, "supplyRoutes", LookMode.Deep);
             Scribe_Collections.Look(ref dormantRoutes, "dormantRoutes", LookMode.Deep);
             Scribe_Collections.Look(ref pendingDeliveries, "pendingDeliveries", LookMode.Deep);
+            Scribe_Values.Look(ref nextDeliveryId, "nextDeliveryId", 0);
             Scribe_Values.Look(ref thresholdLetterSent, "thresholdLetterSent", false);
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
@@ -673,6 +678,7 @@ namespace FactionColonies.SupplyChain
             // here for parity with a normal arrival; caps clamp on the next EnsureCaps.
             foreach (PendingDelivery d in pendingDeliveries)
             {
+                DestroyCaravanOf(d);
                 if (d.resource is null) continue;
                 double credited = d.amount * d.efficiency;
                 if (credited <= 0) continue;
@@ -892,9 +898,10 @@ namespace FactionColonies.SupplyChain
         }
 
         /// <summary>
-        /// Credits every in-transit delivery whose arrival tick has passed to its destination
-        /// stockpile (efficiency applied here). Deliveries to a destroyed/missing settlement are
-        /// dropped gracefully — the source already spent the goods at dispatch.
+        /// Daily safety net: credits any delivery that has NO live world object (straight-line
+        /// pod/shuttle deliveries, or a road delivery whose caravan was lost) once its arrival tick
+        /// passes. Road deliveries with a live caravan are completed by the caravan on physical
+        /// arrival (see <see cref="CompleteDelivery"/>), so they are skipped here.
         /// </summary>
         private void ProcessArrivals(FactionFC faction)
         {
@@ -902,6 +909,7 @@ namespace FactionColonies.SupplyChain
             List<PendingDelivery> arrived = null;
             foreach (PendingDelivery d in pendingDeliveries)
             {
+                if (d.caravan is object) continue;   // a live caravan drives this delivery's arrival
                 if (now < d.arrivalTick) continue;
                 if (arrived is null) arrived = new List<PendingDelivery>();
                 arrived.Add(d);
@@ -909,22 +917,81 @@ namespace FactionColonies.SupplyChain
             if (arrived is null) return;
 
             foreach (PendingDelivery d in arrived)
-            {
-                pendingDeliveries.Remove(d);
+                CompleteDelivery(d);
+        }
 
-                if (d.destination is null || d.destination.Destroyed || d.resource is null) continue;
+        /// <summary>
+        /// Credits a single in-transit delivery to its destination stockpile (efficiency applied here)
+        /// and removes it from the pending list. Deliveries to a destroyed/missing settlement are
+        /// dropped gracefully — the source already spent the goods at dispatch. Idempotent: a delivery
+        /// no longer in the pending list is ignored. Called both by <see cref="ProcessArrivals"/> and by
+        /// a <see cref="DeliveryCaravan"/> when it physically reaches the destination.
+        /// </summary>
+        public void CompleteDelivery(PendingDelivery d)
+        {
+            if (d is null) return;
+            if (!pendingDeliveries.Remove(d)) return;   // already completed
+            d.caravan = null;
+
+            if (d.destination is object && !d.destination.Destroyed && d.resource is object)
+            {
                 WorldObjectComp_SupplyChain destComp = GetComp(d.destination);
                 IStockpile destStockpile = destComp?.GetStockpile();
-                if (destStockpile is null) continue;
-
-                double credited = d.amount * d.efficiency;
-                if (credited <= 0) continue;
-
-                double excess = destStockpile.Credit(d.resource, credited);
-                if (excess > 0)
-                    LogSC.Message($"Delivery to {d.destination.Name}: {excess} {d.resource.label} lost to destination overflow.");
+                if (destStockpile is object)
+                {
+                    double credited = d.amount * d.efficiency;
+                    if (credited > 0)
+                    {
+                        double excess = destStockpile.Credit(d.resource, credited);
+                        if (excess > 0)
+                            LogSC.Message($"Delivery to {d.destination.Name}: {excess} {d.resource.label} lost to destination overflow.");
+                    }
+                }
             }
             DirtyFlowCache();
+        }
+
+        /// <summary>Destroys the world object following <paramref name="d"/>, if any (does not credit).</summary>
+        private static void DestroyCaravanOf(PendingDelivery d)
+        {
+            if (d?.caravan is object)
+            {
+                if (!d.caravan.Destroyed) d.caravan.Destroy();
+                d.caravan = null;
+            }
+        }
+
+        private void ReconcileDeliveryCaravans()
+        {
+            if (pendingDeliveries is null) return;
+
+            // The delivery <-> caravan links are serialized cross-references, so no value-matching is
+            // needed. Only two fixups: destroy caravans whose delivery didn't survive the load (orphans),
+            // and — when the feature is enabled — spawn a caravan for any road delivery still missing one.
+            List<DeliveryCaravan> orphans = null;
+            foreach (WorldObject wo in Find.WorldObjects.AllWorldObjects)
+            {
+                if (wo is DeliveryCaravan dc && dc.LinkedDelivery is null)
+                {
+                    if (orphans is null) orphans = new List<DeliveryCaravan>();
+                    orphans.Add(dc);
+                }
+            }
+            if (orphans != null)
+            {
+                foreach (DeliveryCaravan dc in orphans)
+                    if (!dc.Destroyed) dc.Destroy();
+            }
+
+            if (SupplyChainSettings.useDeliveryCaravans)
+            {
+                foreach (PendingDelivery d in pendingDeliveries)
+                {
+                    if (d.caravan is object) continue;
+                    if (d.pathTiles != null && d.pathTiles.Count >= 2)
+                        DeliveryCaravan.Spawn(d);
+                }
+            }
         }
 
         /// <summary>
@@ -964,7 +1031,13 @@ namespace FactionColonies.SupplyChain
                     PendingDelivery d = route.TryDispatch(sourceStockpile);
                     if (d != null)
                     {
+                        d.loadId = nextDeliveryId++;
                         pendingDeliveries.Add(d);
+                        // With the feature enabled, road-routed deliveries get a world object that follows the
+                        // path and drives arrival; straight-line (pod/shuttle) deliveries and the disabled
+                        // feature have no path/object and arrive via ProcessArrivals.
+                        if (SupplyChainSettings.useDeliveryCaravans && d.pathTiles != null && d.pathTiles.Count >= 2)
+                            DeliveryCaravan.Spawn(d);
                         LogSC.Message($"Dispatched {d.amount} {route.resource.label} from {route.source.Name} -> {route.destination.Name}, arriving in {(d.arrivalTick - now).ToStringTicksToPeriod()}");
                     }
                 }
@@ -1056,15 +1129,23 @@ namespace FactionColonies.SupplyChain
             DirtyFlowCache();
         }
 
-        /// <summary>Debug: force every in-transit delivery to arrive now.</summary>
+        /// <summary>
+        /// Debug: force every in-transit delivery to complete now — credit its goods to the destination
+        /// and remove its on-map caravan — including caravan-driven road deliveries (which
+        /// <see cref="ProcessArrivals"/> deliberately skips, since a live caravan drives their arrival).
+        /// </summary>
         public void DebugForceArriveAllDeliveries()
         {
             FactionFC faction = FindFC.FactionComp;
             if (faction is null || mode != SupplyChainMode.Complex) return;
-            int now = Find.TickManager.TicksGame;
-            foreach (PendingDelivery d in pendingDeliveries)
-                d.arrivalTick = now;
-            ProcessArrivals(faction);
+
+            // Snapshot first: CompleteDelivery mutates pendingDeliveries.
+            List<PendingDelivery> all = new List<PendingDelivery>(pendingDeliveries);
+            foreach (PendingDelivery d in all)
+            {
+                DestroyCaravanOf(d);   // remove the on-map caravan (no-op for straight-line deliveries)
+                CompleteDelivery(d);   // credit destination + remove from pendingDeliveries
+            }
             DirtyFlowCache();
         }
 
@@ -1141,7 +1222,12 @@ namespace FactionColonies.SupplyChain
             dormantRoutes.RemoveAll(r => r.source == settlement || r.destination == settlement);
             // Drop in-transit deliveries bound for this settlement (can no longer be credited).
             // Leave deliveries that merely originated here — the goods already left and are en route.
-            pendingDeliveries.RemoveAll(d => d.destination == settlement);
+            pendingDeliveries.RemoveAll(d =>
+            {
+                if (d.destination != settlement) return false;
+                DestroyCaravanOf(d);
+                return true;
+            });
             InvalidateAllRoutes();
             capsAndStockpilesDirty = true;
             DirtyFlowCache();

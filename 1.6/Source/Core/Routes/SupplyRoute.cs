@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using RimWorld;
+using RimWorld.Planet;
 using UnityEngine;
 using Verse;
 
@@ -23,10 +24,15 @@ namespace FactionColonies.SupplyChain
         // Cached (not saved)
         private int cachedTravelTicks;
         private double cachedEfficiency;
+        private List<PlanetTile> cachedPathTiles;
         private bool dirty = true;
 
         public int CachedTravelTicks => cachedTravelTicks;
         public double CachedEfficiency => cachedEfficiency;
+
+        // Ordered overland tile path (source -> destination) for this route, or null when travel is
+        // straight-line (pods/shuttle/cross-layer). Captured for free from the travel-time recache below.
+        public List<PlanetTile> CachedPathTiles => cachedPathTiles;
 
         public SupplyRoute()
         {
@@ -80,10 +86,11 @@ namespace FactionColonies.SupplyChain
             {
                 cachedTravelTicks = 0;
                 cachedEfficiency = 0.0;
+                cachedPathTiles = null;
                 return;
             }
 
-            cachedTravelTicks = TravelUtil.ReturnTicksToArrive(source.Tile, destination.Tile);
+            cachedTravelTicks = TravelUtil.ReturnTicksToArrive(source.Tile, destination.Tile, out cachedPathTiles);
             double travelDays = cachedTravelTicks / (double)GenDate.TicksPerDay;
             double baseEfficiency = FormulaUtil.RouteEfficiency(travelDays);
 
@@ -134,7 +141,13 @@ namespace FactionColonies.SupplyChain
                 amount = drawn,                // amountPerPeriod is a target; ship whatever we could draw
                 efficiency = cachedEfficiency, // snapshot; the route may change before arrival
                 dispatchTick = now,
-                arrivalTick = now + cachedTravelTicks
+                arrivalTick = now + cachedTravelTicks,
+                // Snapshot the road path only when delivery caravans are enabled — that keeps the abstract
+                // path byte-identical to the pre-caravan behaviour (no saved path, no world object). Null for
+                // straight-line travel (pods/shuttle) too, which never spawns a caravan.
+                pathTiles = (SupplyChainSettings.useDeliveryCaravans && cachedPathTiles != null)
+                    ? new List<PlanetTile>(cachedPathTiles)
+                    : null
             };
         }
 

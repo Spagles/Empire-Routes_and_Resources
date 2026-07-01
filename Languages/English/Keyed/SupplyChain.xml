@@ -137,7 +137,14 @@
     <SC_ShowRouteLabels>Show Labels</SC_ShowRouteLabels>
     <SC_ShowRouteLabelsDesc>Toggle display of resource type and amount labels on visible supply route lines.</SC_ShowRouteLabelsDesc>
     <SC_SettingsAnimateArrows>Animate route arrows on world map</SC_SettingsAnimateArrows>
+    <SC_SettingsUseDeliveryCaravans>Show supply deliveries as caravans</SC_SettingsUseDeliveryCaravans>
+    <SC_SettingsUseDeliveryCaravansTip>When enabled, in-transit supply deliveries appear as caravan-like objects that travel along roads and terrain on the world map. When disabled, deliveries are resolved abstractly with no world-map object.</SC_SettingsUseDeliveryCaravansTip>
     <SC_SettingsUseMaxWorkers>Base worker needs on total population instead of assigned workers</SC_SettingsUseMaxWorkers>
+
+    <!-- Delivery caravan inspect strings -->
+    <SC_DeliveryCaravanRoute>From {0} to {1}</SC_DeliveryCaravanRoute>
+    <SC_DeliveryCaravanCargo>{0}: {1}</SC_DeliveryCaravanCargo>
+    <SC_DeliveryCaravanETA>Arrives in {0}</SC_DeliveryCaravanETA>
 
     <!-- Building Detail Section -->
     <SC_BuildingNeeds>Building Needs</SC_BuildingNeeds>
