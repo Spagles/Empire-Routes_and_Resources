@@ -850,7 +850,7 @@ namespace FactionColonies.SupplyChain
 
             if (routeToRemove != null)
             {
-                wc.SupplyRoutes.Remove(routeToRemove);
+                wc.UnlinkRoute(routeToRemove);
                 wc.DirtyFlowCache();
             }
 
@@ -979,7 +979,7 @@ namespace FactionColonies.SupplyChain
                     SupplyRoute route = new SupplyRoute(src, dest, newRouteResource, newRouteAmount);
                     route.frequencyDays = Mathf.Clamp(newRouteFrequency,
                         SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
-                    wc.SupplyRoutes.Add(route);
+                    wc.LinkRoute(route);
                     wc.DirtyFlowCache();
 
                     newRouteOther = null;
@@ -1090,7 +1090,7 @@ namespace FactionColonies.SupplyChain
                     SupplyRoute route = new SupplyRoute(src, dest, newRouteResource, newRouteAmount);
                     route.frequencyDays = Mathf.Clamp(newRouteFrequency,
                         SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
-                    wc.SupplyRoutes.Add(route);
+                    wc.LinkRoute(route);
                     wc.DirtyFlowCache();
 
                     newRouteOther = null;

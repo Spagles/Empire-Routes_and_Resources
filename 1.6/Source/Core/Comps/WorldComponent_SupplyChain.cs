@@ -87,7 +87,7 @@ namespace FactionColonies.SupplyChain
 
         public SupplyChainMode Mode => mode;
         public IStockpile Stockpile => stockpile;
-        public List<SupplyRoute> SupplyRoutes => supplyRoutes;
+        public IReadOnlyList<SupplyRoute> SupplyRoutes => supplyRoutes;
         public FoundingCostValidator FoundingValidator => foundingValidator;
         
         // --- Lifecycle ---
@@ -122,6 +122,12 @@ namespace FactionColonies.SupplyChain
                 LogSC.MessageForce("Mode mismatch: save=" + mode + ", settings=" + SupplyChainSettings.mode + ". Switching.");
                 SwitchMode(SupplyChainSettings.mode);
             }
+
+            // Rebuild the transient trade-network partner sets from the loaded routes (Complex mode).
+            // The serialized connectedPartners/hubScore keep bonuses valid until this runs; the
+            // recompute is a no-op on the stat cache when it matches (SetNetworkInfo early-out).
+            if (mode == SupplyChainMode.Complex)
+                RebuildAllPartnerSets(FindFC.FactionComp);
 
             LogSC.MessageForce("WorldComponent_SupplyChain initialized (mode=" + mode + ", fromLoad=" + fromLoad + ")");
         }
@@ -632,7 +638,7 @@ namespace FactionColonies.SupplyChain
                 {
                     route.SetDirty();
                     route.nextDispatchTick = -1; // re-stagger dispatch from the switch moment
-                    supplyRoutes.Add(route);
+                    LinkRoute(route);
                 }
                 else
                 {
@@ -675,9 +681,11 @@ namespace FactionColonies.SupplyChain
             }
             pendingDeliveries.Clear();
 
-            // 3. Stash routes as dormant
+            // 3. Stash routes as dormant and drop all trade-network partner links.
             dormantRoutes.AddRange(supplyRoutes);
             supplyRoutes.Clear();
+            foreach (WorldSettlementFC settlement in faction.settlements)
+                GetComp(settlement)?.ClearPartners();
 
             // 4. Reconstruct faction stockpile and recalculate caps
             RecalculateCaps();
@@ -855,7 +863,6 @@ namespace FactionColonies.SupplyChain
 
             ProcessArrivals(faction);
             DispatchDueRoutes(faction);
-            UpdateNetworkBonusesFromTopology(faction);
 
             foreach (WorldSettlementFC settlement in faction.settlements)
             {
@@ -968,69 +975,73 @@ namespace FactionColonies.SupplyChain
             if (invalidRoutes != null)
             {
                 foreach (SupplyRoute route in invalidRoutes)
-                    supplyRoutes.Remove(route);
+                    UnlinkRoute(route);
                 DirtyFlowCache();
             }
         }
 
+        // --- Trade-network partner-set maintenance ---
+        // Each settlement's in/out partner sets are maintained incrementally as routes are created
+        // and deleted; the daily tick never rebuilds them. A pair may be joined by more than one
+        // route (e.g. different resources), so a set entry is only dropped once the LAST route
+        // connecting that directed pair is gone.
+
         /// <summary>
-        /// Recomputes trade-network partner/hub bonuses from the route topology (a pair counts as
-        /// connected if a valid route links them), independent of whether a delivery fired today —
-        /// dispatches are now staggered across days, so per-transfer counting would flicker.
+        /// Adds a route to the list AND registers its endpoints as partners, atomically. The only
+        /// sanctioned way to add to <see cref="supplyRoutes"/>. Idempotent.
         /// </summary>
-        private void UpdateNetworkBonusesFromTopology(FactionFC faction)
+        public void LinkRoute(SupplyRoute r)
         {
-            Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>> networkOut =
-                new Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>>();
-            Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>> networkIn =
-                new Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>>();
+            if (r is null || supplyRoutes.Contains(r)) return;
+            supplyRoutes.Add(r);
+            LinkPartners(r);
+        }
 
-            foreach (SupplyRoute route in supplyRoutes)
-            {
-                if (!route.IsValid()) continue;
+        /// <summary>
+        /// Removes a route from the list AND drops its partner link (if no remaining route still
+        /// connects the pair), atomically. The only sanctioned way to remove from
+        /// <see cref="supplyRoutes"/>.
+        /// </summary>
+        public void UnlinkRoute(SupplyRoute r)
+        {
+            if (r is null || !supplyRoutes.Remove(r)) return; // remove first, then reassess the pair
+            UnlinkPartners(r.source, r.destination);
+        }
 
-                if (!networkOut.TryGetValue(route.source, out HashSet<WorldSettlementFC> outSet))
-                {
-                    outSet = new HashSet<WorldSettlementFC>();
-                    networkOut[route.source] = outSet;
-                }
-                outSet.Add(route.destination);
+        /// <summary>Registers a route's endpoints as partners. Partner-set only — does not touch the
+        /// route list, so it is safe to call over routes already in the list (see RebuildAllPartnerSets).</summary>
+        private void LinkPartners(SupplyRoute r)
+        {
+            if (r is null || !r.IsValid()) return;
+            GetComp(r.source)?.AddOutPartner(r.destination);
+            GetComp(r.destination)?.AddInPartner(r.source);
+        }
 
-                if (!networkIn.TryGetValue(route.destination, out HashSet<WorldSettlementFC> inSet))
-                {
-                    inSet = new HashSet<WorldSettlementFC>();
-                    networkIn[route.destination] = inSet;
-                }
-                inSet.Add(route.source);
-            }
+        /// <summary>Drops the partner link for a directed pair, but only if no remaining route still
+        /// connects it. Partner-set only; call AFTER the route has left <see cref="supplyRoutes"/>.</summary>
+        private void UnlinkPartners(WorldSettlementFC src, WorldSettlementFC dst)
+        {
+            if (src is null || dst is null) return;
+            if (AnyRouteConnects(src, dst)) return;
+            GetComp(src)?.RemoveOutPartner(dst);
+            GetComp(dst)?.RemoveInPartner(src);
+        }
 
+        private bool AnyRouteConnects(WorldSettlementFC src, WorldSettlementFC dst)
+        {
+            foreach (SupplyRoute r in supplyRoutes)
+                if (r.IsValid() && r.source == src && r.destination == dst) return true;
+            return false;
+        }
+
+        /// <summary>Full rebuild of every settlement's partner sets from the route list (load only).</summary>
+        private void RebuildAllPartnerSets(FactionFC faction)
+        {
+            if (faction is null) return;
             foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                WorldObjectComp_SupplyChain netComp = GetComp(settlement);
-                if (netComp is null) continue;
-
-                networkOut.TryGetValue(settlement, out HashSet<WorldSettlementFC> outP);
-                networkIn.TryGetValue(settlement, out HashSet<WorldSettlementFC> inP);
-
-                int outCount = outP?.Count ?? 0;
-                int inCount = inP?.Count ?? 0;
-
-                int partners;
-                if (outP != null && inP != null)
-                {
-                    HashSet<WorldSettlementFC> all = new HashSet<WorldSettlementFC>(outP);
-                    foreach (WorldSettlementFC s in inP)
-                        all.Add(s);
-                    partners = all.Count;
-                }
-                else
-                {
-                    partners = outCount + inCount;
-                }
-
-                int hub = outCount < inCount ? outCount : inCount;
-                netComp.SetNetworkInfo(partners, hub);
-            }
+                GetComp(settlement)?.ClearPartners();
+            foreach (SupplyRoute route in supplyRoutes)
+                LinkPartners(route);
         }
 
         /// <summary>Debug: dispatch every route now, ignoring its schedule.</summary>
@@ -1112,9 +1123,21 @@ namespace FactionColonies.SupplyChain
 
         public void OnSettlementRemoved(WorldSettlementFC settlement)
         {
+            // Drop every active route touching this settlement through the atomic UnlinkRoute so the
+            // route list and partner sets stay consistent. Snapshot first (can't mutate while iterating).
+            List<SupplyRoute> touching = null;
+            foreach (SupplyRoute r in supplyRoutes)
+            {
+                if (r.source != settlement && r.destination != settlement) continue;
+                if (touching is null) touching = new List<SupplyRoute>();
+                touching.Add(r);
+            }
+            if (touching != null)
+                foreach (SupplyRoute r in touching)
+                    UnlinkRoute(r);
+
             SupplyChainCache.ClearCompCache();
-            // Remove routes referencing this settlement
-            supplyRoutes.RemoveAll(r => r.source == settlement || r.destination == settlement);
+            // Dormant routes are never partner-linked, so drop them directly.
             dormantRoutes.RemoveAll(r => r.source == settlement || r.destination == settlement);
             // Drop in-transit deliveries bound for this settlement (can no longer be credited).
             // Leave deliveries that merely originated here — the goods already left and are en route.
@@ -1906,7 +1929,7 @@ namespace FactionColonies.SupplyChain
             if (routesToRemove != null)
             {
                 foreach (SupplyRoute route in routesToRemove)
-                    supplyRoutes.Remove(route);
+                    UnlinkRoute(route);
                 DirtyFlowCache();
             }
 
@@ -2022,7 +2045,7 @@ namespace FactionColonies.SupplyChain
                     SupplyRoute route = new SupplyRoute(newRouteSource, newRouteDest, newRouteResource, newRouteAmount);
                     route.frequencyDays = Mathf.Clamp(newRouteFrequency,
                         SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
-                    supplyRoutes.Add(route);
+                    LinkRoute(route);
                     DirtyFlowCache();
 
                     newRouteSource = null;

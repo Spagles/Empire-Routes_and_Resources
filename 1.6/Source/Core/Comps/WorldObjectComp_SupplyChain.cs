@@ -52,9 +52,15 @@ namespace FactionColonies.SupplyChain
 
         private bool localCapsDirty = true;
 
-        // Trade network
+        // Trade network. connectedPartners/hubScore are the serialized derived bonuses; the partner
+        // sets are transient adjacency, rebuilt from the route list on load and maintained
+        // incrementally as routes are created/deleted (see WorldComponent_SupplyChain link/unlink).
         private int connectedPartners;
         private int hubScore;
+        private HashSet<WorldSettlementFC> outPartners = new HashSet<WorldSettlementFC>();
+        private HashSet<WorldSettlementFC> inPartners = new HashSet<WorldSettlementFC>();
+        public IEnumerable<WorldSettlementFC> OutPartners => outPartners;
+        public IEnumerable<WorldSettlementFC> InPartners => inPartners;
 
         private WorldSettlementFC cachedSettlement;
 
@@ -171,9 +177,40 @@ namespace FactionColonies.SupplyChain
 
         public void SetNetworkInfo(int partners, int hub)
         {
+            // Early-out on unchanged values so daily/bulk recomputes don't needlessly thrash the
+            // stat cache — only settlements whose bonuses actually changed get invalidated.
+            if (partners == connectedPartners && hub == hubScore) return;
             connectedPartners = partners;
             hubScore = hub;
             statModsDirty = true;
+        }
+
+        // --- Incremental partner-set maintenance ---
+        // Mutators recompute only when membership actually changes (HashSet.Add/Remove report it),
+        // so a second route to an already-connected partner is a no-op.
+
+        public void AddOutPartner(WorldSettlementFC s) { if (outPartners.Add(s)) RecomputeNetwork(); }
+        public void RemoveOutPartner(WorldSettlementFC s) { if (outPartners.Remove(s)) RecomputeNetwork(); }
+        public void AddInPartner(WorldSettlementFC s) { if (inPartners.Add(s)) RecomputeNetwork(); }
+        public void RemoveInPartner(WorldSettlementFC s) { if (inPartners.Remove(s)) RecomputeNetwork(); }
+
+        public void ClearPartners()
+        {
+            bool any = outPartners.Count > 0 || inPartners.Count > 0;
+            outPartners.Clear();
+            inPartners.Clear();
+            if (any) RecomputeNetwork();
+        }
+
+        private void RecomputeNetwork()
+        {
+            int outC = outPartners.Count;
+            int inC = inPartners.Count;
+            int partners = outC; // distinct union of in and out neighbours
+            foreach (WorldSettlementFC s in inPartners)
+                if (!outPartners.Contains(s)) partners++;
+            int hub = outC < inC ? outC : inC;
+            SetNetworkInfo(partners, hub);
         }
 
         // --- IStatModifierProvider (trade-network slice) ---
