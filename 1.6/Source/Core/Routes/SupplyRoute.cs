@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using RimWorld;
+using UnityEngine;
 using Verse;
 
 namespace FactionColonies.SupplyChain
@@ -12,6 +13,12 @@ namespace FactionColonies.SupplyChain
         public ResourceTypeDef resource;
         public double amountPerPeriod;
         public int priority;
+
+        // How often (in days) this route dispatches a delivery, and when its next dispatch is due.
+        // nextDispatchTick = -1 is a sentinel meaning "not yet scheduled" — a new route dispatches
+        // immediately on the first daily tick after creation, then every frequencyDays thereafter.
+        public int frequencyDays = SupplyChainSettings.defaultRouteFrequencyDays;
+        public int nextDispatchTick = -1;
 
         // Cached (not saved)
         private int cachedTravelTicks;
@@ -33,8 +40,21 @@ namespace FactionColonies.SupplyChain
             this.resource = resource;
             this.amountPerPeriod = amountPerPeriod;
             this.priority = priority;
-            
+
             dirty = true;
+        }
+
+        /// <summary>
+        /// Sets the delivery frequency (clamped to the configured bounds) and reschedules the next
+        /// dispatch relative to now, so a shortened frequency takes effect promptly.
+        /// </summary>
+        public void SetFrequencyDays(int days)
+        {
+            int clamped = Mathf.Clamp(days, SupplyChainSettings.minRouteFrequencyDays,
+                SupplyChainSettings.maxRouteFrequencyDays);
+            if (clamped == frequencyDays) return;
+            frequencyDays = clamped;
+            nextDispatchTick = Find.TickManager.TicksGame + frequencyDays * GenDate.TicksPerDay;
         }
 
         /// <summary>
@@ -92,27 +112,30 @@ namespace FactionColonies.SupplyChain
         }
 
         /// <summary>
-        /// Execute this route: draw from source stockpile, credit dest stockpile with efficiency loss.
-        /// Returns the actual amount credited to destination.
+        /// Dispatch a delivery: draw up to <see cref="amountPerPeriod"/> from the source stockpile
+        /// (shipping whatever is available if short) and return a self-contained
+        /// <see cref="PendingDelivery"/> that arrives after this route's travel time, with efficiency
+        /// applied on arrival. Returns null if the route is invalid or nothing could be drawn.
         /// </summary>
-        public double Execute(IStockpile sourceStockpile, IStockpile destStockpile)
+        public PendingDelivery TryDispatch(IStockpile sourceStockpile)
         {
             if (!IsValid() || amountPerPeriod <= 0 || cachedEfficiency <= 0)
-                return 0.0;
+                return null;
 
             if (!sourceStockpile.TryDraw(resource, amountPerPeriod, out double drawn) || drawn <= 0)
-                return 0.0;
+                return null;
 
-            double transferred = drawn * cachedEfficiency;
-            double excess = destStockpile.Credit(resource, transferred);
-
-            // If destination is full, the excess is lost (efficiency loss + overflow)
-            if (excess > 0)
+            int now = Find.TickManager.TicksGame;
+            return new PendingDelivery
             {
-                LogSC.Message($"Route {source.Name} -> {destination.Name}: {excess} {resource.label} lost to destination overflow.");
-            }
-
-            return transferred - excess;
+                source = source,
+                destination = destination,
+                resource = resource,
+                amount = drawn,                // amountPerPeriod is a target; ship whatever we could draw
+                efficiency = cachedEfficiency, // snapshot; the route may change before arrival
+                dispatchTick = now,
+                arrivalTick = now + cachedTravelTicks
+            };
         }
 
         public void ExposeData()
@@ -122,6 +145,8 @@ namespace FactionColonies.SupplyChain
             Scribe_Defs.Look(ref resource, "resource");
             Scribe_Values.Look(ref amountPerPeriod, "amountPerPeriod", 0.0);
             Scribe_Values.Look(ref priority, "priority", 0);
+            Scribe_Values.Look(ref frequencyDays, "frequencyDays", SupplyChainSettings.defaultRouteFrequencyDays);
+            Scribe_Values.Look(ref nextDispatchTick, "nextDispatchTick", -1);
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {

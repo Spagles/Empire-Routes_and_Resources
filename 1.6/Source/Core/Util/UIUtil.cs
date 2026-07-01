@@ -56,16 +56,17 @@ namespace FactionColonies.SupplyChain
             if (flow.titheInjection > 0)
                 tip += "\n" + (string)"SC_BarFlowTitheInjection".Translate(flow.titheInjection.ToString("F1"));
 
-            // --- Per-tax-cycle section: routes and sell orders resolve once per cycle ---
-            if (flow.routeIn > 0 || flow.routeOut > 0 || flow.sellOrders > 0)
+            // Routes now dispatch on each route's own frequency; routeIn/routeOut are daily averages.
+            if (flow.routeIn > 0)
+                tip += "\n" + (string)"SC_BarFlowRouteIn".Translate(flow.routeIn.ToString("F1"));
+            if (flow.routeOut > 0)
+                tip += "\n" + (string)"SC_BarFlowRouteOut".Translate(flow.routeOut.ToString("F1"));
+
+            // --- Per-tax-cycle section: sell orders resolve once per tax cycle ---
+            if (flow.sellOrders > 0)
             {
                 tip += "\n" + (string)"SC_BarFlowCycleHeader".Translate();
-                if (flow.routeIn > 0)
-                    tip += "\n" + (string)"SC_BarFlowRouteIn".Translate(flow.routeIn.ToString("F1"));
-                if (flow.routeOut > 0)
-                    tip += "\n" + (string)"SC_BarFlowRouteOut".Translate(flow.routeOut.ToString("F1"));
-                if (flow.sellOrders > 0)
-                    tip += "\n" + (string)"SC_BarFlowSellOrders".Translate(flow.sellOrders.ToString("F1"));
+                tip += "\n" + (string)"SC_BarFlowSellOrders".Translate(flow.sellOrders.ToString("F1"));
             }
 
             if (numSettlements > 0)

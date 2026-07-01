@@ -14,6 +14,7 @@
     <SC_SettingsBaseCap>Base stockpile cap per settlement per resource: {0}</SC_SettingsBaseCap>
     <SC_SettingsRouteDecay>Route efficiency decay per travel day: {0}\nFormula: efficiency = 1 / (1 + days × decay)\nExample: 5-day route → 1 / (1 + 5 × {0}) = {1}%</SC_SettingsRouteDecay>
     <SC_SettingsLocalCap>Local stockpile cap per resource (Complex mode): {0}</SC_SettingsLocalCap>
+    <SC_SettingsDefaultRouteFreq>Default delivery frequency for new routes (days): {0}</SC_SettingsDefaultRouteFreq>
 
     <!-- Building Filters -->
     <SC_FilterStockpileCap>Stockpile Cap</SC_FilterStockpileCap>
@@ -41,7 +42,7 @@
     <SC_EmpireSupplyNetwork>{0} Supply Network</SC_EmpireSupplyNetwork>
     <SC_ModeComplex>Mode: Complex</SC_ModeComplex>
     <SC_Settlement>Settlement</SC_Settlement>
-    <SC_PerPeriod>{0}/tax cycle</SC_PerPeriod>
+    <SC_PerPeriod>{0}/delivery</SC_PerPeriod>
     <SC_EfficiencyPercent>{0}%</SC_EfficiencyPercent>
     <SC_EfficiencyTooltip>Travel: {0} days\nDecay rate: {1}/day\nEfficiency: {2}%\n\nFormula: 1 / (1 + days × decay)</SC_EfficiencyTooltip>
     <SC_NewRoute>New route:</SC_NewRoute>
@@ -52,6 +53,14 @@
     <SC_All>All</SC_All>
     <SC_TabStockpiles>Stockpiles</SC_TabStockpiles>
     <SC_TabRoutes>Routes</SC_TabRoutes>
+    <SC_TabDeliveries>Deliveries</SC_TabDeliveries>
+
+    <!-- Deliveries (in-transit) + route frequency -->
+    <SC_NoDeliveries>No deliveries in transit.</SC_NoDeliveries>
+    <SC_DeliveryEta>Arrives in {0} ({1}% of the way there)</SC_DeliveryEta>
+    <SC_FreqDays>{0}d</SC_FreqDays>
+    <SC_FrequencyLabel>Frequency</SC_FrequencyLabel>
+    <SC_FrequencyTooltip>How often this route dispatches a delivery, in days. Each dispatch draws from the source immediately; the goods arrive at the destination after the route's travel time.</SC_FrequencyTooltip>
 
     <!-- Stockpile Bar Flow Tooltips -->
     <SC_BarNetPositive>Daily net: +{0}/day</SC_BarNetPositive>
@@ -79,6 +88,7 @@
     <SC_SubProduction>Production</SC_SubProduction>
     <SC_SubOrders>Orders</SC_SubOrders>
     <SC_SubRoutes>Routes</SC_SubRoutes>
+    <SC_SubDeliveries>Deliveries</SC_SubDeliveries>
     <SC_NoNeeds>No settlement needs defined.</SC_NoNeeds>
     <SC_DirectionFrom>From This Settlement</SC_DirectionFrom>
     <SC_DirectionTo>To This Settlement</SC_DirectionTo>

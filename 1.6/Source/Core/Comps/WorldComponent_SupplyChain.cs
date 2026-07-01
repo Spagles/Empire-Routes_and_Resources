@@ -18,6 +18,11 @@ namespace FactionColonies.SupplyChain
         private List<SupplyRoute> supplyRoutes = new List<SupplyRoute>();
         private List<SupplyRoute> dormantRoutes = new List<SupplyRoute>();
 
+        // In-transit deliveries (Complex mode). Stored here rather than as FCEvents so they never
+        // appear in the base mod's Events tab; ticked down daily in DailyConsume_Complex.
+        private List<PendingDelivery> pendingDeliveries = new List<PendingDelivery>();
+        public List<PendingDelivery> PendingDeliveries => pendingDeliveries;
+
         // Route visualization (transient, not saved)
         public bool showAllRoutes;
         public bool showSelectedRoutes;
@@ -57,9 +62,10 @@ namespace FactionColonies.SupplyChain
         private float newTitheAmount;
 
         // Complex mode tab state
-        private int complexTab = 0; // 0 = Stockpiles, 1 = Routes
+        private int complexTab = 0; // 0 = Stockpiles, 1 = Routes, 2 = Deliveries
         private Vector2 scrollPosStockpiles;
         private Vector2 scrollPosRoutes;
+        private Vector2 scrollPosDeliveries;
 
         // Route creation UI state
         private WorldSettlementFC newRouteSource;
@@ -67,6 +73,8 @@ namespace FactionColonies.SupplyChain
         private ResourceTypeDef newRouteResource;
         private string newRouteAmountBuffer = "";
         private float newRouteAmount;
+        private int newRouteFrequency = SupplyChainSettings.defaultRouteFrequencyDays;
+        private string newRouteFreqBuffer = "";
         private ResourceTypeDef routeFilterResource;
 
         private bool thresholdLetterSent;
@@ -98,6 +106,8 @@ namespace FactionColonies.SupplyChain
                 supplyRoutes = new List<SupplyRoute>();
             if (dormantRoutes == null)
                 dormantRoutes = new List<SupplyRoute>();
+            if (pendingDeliveries == null)
+                pendingDeliveries = new List<PendingDelivery>();
 
             stockpile = new DictionaryStockpile(factionStockpile, factionCaps);
 
@@ -271,6 +281,7 @@ namespace FactionColonies.SupplyChain
 
             Scribe_Collections.Look(ref supplyRoutes, "supplyRoutes", LookMode.Deep);
             Scribe_Collections.Look(ref dormantRoutes, "dormantRoutes", LookMode.Deep);
+            Scribe_Collections.Look(ref pendingDeliveries, "pendingDeliveries", LookMode.Deep);
             Scribe_Values.Look(ref thresholdLetterSent, "thresholdLetterSent", false);
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
@@ -285,6 +296,8 @@ namespace FactionColonies.SupplyChain
                     supplyRoutes = new List<SupplyRoute>();
                 if (dormantRoutes == null)
                     dormantRoutes = new List<SupplyRoute>();
+                if (pendingDeliveries == null)
+                    pendingDeliveries = new List<PendingDelivery>();
             }
         }
 
@@ -424,10 +437,13 @@ namespace FactionColonies.SupplyChain
             foreach (SupplyRoute route in supplyRoutes)
             {
                 if (!route.IsValid() || route.resource != def) continue;
+                // Normalize each route's per-delivery amount to a daily average so the flow display
+                // is comparable across routes with different delivery frequencies.
+                double perDay = route.frequencyDays > 0 ? 1.0 / route.frequencyDays : 1.0;
                 if (route.destination == settlement)
-                    flow.routeIn += route.amountPerPeriod * route.CachedEfficiency;
+                    flow.routeIn += route.amountPerPeriod * route.CachedEfficiency * perDay;
                 if (route.source == settlement)
-                    flow.routeOut += route.amountPerPeriod;
+                    flow.routeOut += route.amountPerPeriod * perDay;
             }
 
             AccumulateSettlementFlow(settlement, def, ref flow);
@@ -615,6 +631,7 @@ namespace FactionColonies.SupplyChain
                 if (route.IsValid())
                 {
                     route.SetDirty();
+                    route.nextDispatchTick = -1; // re-stagger dispatch from the switch moment
                     supplyRoutes.Add(route);
                 }
                 else
@@ -645,11 +662,24 @@ namespace FactionColonies.SupplyChain
                 comp.ClearLocalData();
             }
 
-            // 2. Stash routes as dormant
+            // 2. Land any in-transit deliveries into the faction stockpile so goods that already
+            // left their source aren't silently destroyed by the mode toggle. Efficiency is applied
+            // here for parity with a normal arrival; caps clamp on the next EnsureCaps.
+            foreach (PendingDelivery d in pendingDeliveries)
+            {
+                if (d.resource is null) continue;
+                double credited = d.amount * d.efficiency;
+                if (credited <= 0) continue;
+                factionStockpile.TryGetValue(d.resource, out double cur);
+                factionStockpile[d.resource] = cur + credited;
+            }
+            pendingDeliveries.Clear();
+
+            // 3. Stash routes as dormant
             dormantRoutes.AddRange(supplyRoutes);
             supplyRoutes.Clear();
 
-            // 3. Reconstruct faction stockpile and recalculate caps
+            // 4. Reconstruct faction stockpile and recalculate caps
             RecalculateCaps();
             stockpile = new DictionaryStockpile(factionStockpile, factionCaps);
         }
@@ -681,108 +711,15 @@ namespace FactionColonies.SupplyChain
 
         private void PreTaxResolution_Complex(FactionFC faction)
         {
-            // Deposits, needs, dormancy, and tithe injection now run daily in PostDailyAccrual.
-            // The tax tick resolves routes (inventory movement), the trade network, a cap-safety
-            // overflow sweep after deliveries, and per-settlement sell orders.
+            // Route movement, arrivals, and the trade network now run daily in DailyConsume_Complex.
+            // The tax tick only runs the silver-generating steps: a cap-safety overflow sweep and
+            // per-settlement sell orders.
 
-            // Refresh local caps (only if buildings changed) before routes move inventory.
+            // Refresh local caps (only if buildings changed) before the overflow/sell sweep.
             foreach (WorldSettlementFC settlement in faction.settlements)
             {
                 GetComp(settlement)?.RecalculateLocalCapsIfDirty();
             }
-
-            // 3. RESOLVE ROUTES (ordered by priority)
-            supplyRoutes.Sort((a, b) => a.priority.CompareTo(b.priority));
-            List<SupplyRoute> invalidRoutes = null;
-
-            // Track route connectivity for trade network bonuses
-            Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>> networkOut =
-                new Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>>();
-            Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>> networkIn =
-                new Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>>();
-
-            foreach (SupplyRoute route in supplyRoutes)
-            {
-                if (!route.IsValid())
-                {
-                    if (invalidRoutes is null) invalidRoutes = new List<SupplyRoute>();
-                    invalidRoutes.Add(route);
-                    continue;
-                }
-
-                route.RecacheIfDirty();
-
-                WorldObjectComp_SupplyChain sourceComp = GetComp(route.source);
-                WorldObjectComp_SupplyChain destComp = GetComp(route.destination);
-
-                if (sourceComp is null || destComp is null) continue;
-
-                IStockpile sourceStockpile = sourceComp.GetStockpile();
-                IStockpile destStockpile = destComp.GetStockpile();
-
-                if (sourceStockpile is null || destStockpile is null) continue;
-
-                double transferred = route.Execute(sourceStockpile, destStockpile);
-                if (transferred > 0)
-                {
-                    LogSC.Message($"Route {route.source.Name} -> {route.destination.Name}: {transferred} {route.resource.label} transferred");
-
-                    // Track connectivity for network bonuses
-                    if (!networkOut.TryGetValue(route.source, out HashSet<WorldSettlementFC> outSet))
-                    {
-                        outSet = new HashSet<WorldSettlementFC>();
-                        networkOut[route.source] = outSet;
-                    }
-                    outSet.Add(route.destination);
-
-                    if (!networkIn.TryGetValue(route.destination, out HashSet<WorldSettlementFC> inSet))
-                    {
-                        inSet = new HashSet<WorldSettlementFC>();
-                        networkIn[route.destination] = inSet;
-                    }
-                    inSet.Add(route.source);
-                }
-            }
-
-            // Clean up invalid routes
-            if (invalidRoutes != null)
-            {
-                foreach (SupplyRoute route in invalidRoutes)
-                    supplyRoutes.Remove(route);
-                DirtyFlowCache();
-            }
-
-            // Distribute network info to settlement comps
-            foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                WorldObjectComp_SupplyChain netComp = GetComp(settlement);
-                if (netComp is null) continue;
-
-                networkOut.TryGetValue(settlement, out HashSet<WorldSettlementFC> outP);
-                networkIn.TryGetValue(settlement, out HashSet<WorldSettlementFC> inP);
-
-                int outCount = outP?.Count ?? 0;
-                int inCount = inP?.Count ?? 0;
-
-                // Distinct partners = union of in and out
-                int partners;
-                if (outP != null && inP != null)
-                {
-                    HashSet<WorldSettlementFC> all = new HashSet<WorldSettlementFC>(outP);
-                    foreach (WorldSettlementFC s in inP)
-                        all.Add(s);
-                    partners = all.Count;
-                }
-                else
-                {
-                    partners = outCount + inCount;
-                }
-
-                int hub = outCount < inCount ? outCount : inCount;
-                netComp.SetNetworkInfo(partners, hub);
-            }
-
-            DirtyFlowCache();
 
             // 6. PER-SETTLEMENT OVERFLOW (anything over cap after route transfers)
             foreach (WorldSettlementFC settlement in faction.settlements)
@@ -910,6 +847,16 @@ namespace FactionColonies.SupplyChain
 
         private void DailyConsume_Complex(FactionFC faction)
         {
+            // Route movement is now daily. Refresh caps first (route dispatch/arrival and needs all
+            // draw from capped local stockpiles), then land arrivals, then dispatch due routes, so
+            // goods that arrive today can satisfy today's needs.
+            foreach (WorldSettlementFC settlement in faction.settlements)
+                GetComp(settlement)?.RecalculateLocalCapsIfDirty();
+
+            ProcessArrivals(faction);
+            DispatchDueRoutes(faction);
+            UpdateNetworkBonusesFromTopology(faction);
+
             foreach (WorldSettlementFC settlement in faction.settlements)
             {
                 WorldObjectComp_SupplyChain dataComp = GetComp(settlement);
@@ -934,6 +881,179 @@ namespace FactionColonies.SupplyChain
                 // 4. Re-sync auto-max allocations for tomorrow's deposit.
                 dataComp.SyncAllAutoMaxAllocations();
             }
+            DirtyFlowCache();
+        }
+
+        /// <summary>
+        /// Credits every in-transit delivery whose arrival tick has passed to its destination
+        /// stockpile (efficiency applied here). Deliveries to a destroyed/missing settlement are
+        /// dropped gracefully — the source already spent the goods at dispatch.
+        /// </summary>
+        private void ProcessArrivals(FactionFC faction)
+        {
+            int now = Find.TickManager.TicksGame;
+            List<PendingDelivery> arrived = null;
+            foreach (PendingDelivery d in pendingDeliveries)
+            {
+                if (now < d.arrivalTick) continue;
+                if (arrived is null) arrived = new List<PendingDelivery>();
+                arrived.Add(d);
+            }
+            if (arrived is null) return;
+
+            foreach (PendingDelivery d in arrived)
+            {
+                pendingDeliveries.Remove(d);
+
+                if (d.destination is null || d.destination.Destroyed || d.resource is null) continue;
+                WorldObjectComp_SupplyChain destComp = GetComp(d.destination);
+                IStockpile destStockpile = destComp?.GetStockpile();
+                if (destStockpile is null) continue;
+
+                double credited = d.amount * d.efficiency;
+                if (credited <= 0) continue;
+
+                double excess = destStockpile.Credit(d.resource, credited);
+                if (excess > 0)
+                    LogSC.Message($"Delivery to {d.destination.Name}: {excess} {d.resource.label} lost to destination overflow.");
+            }
+            DirtyFlowCache();
+        }
+
+        /// <summary>
+        /// Dispatches every route whose scheduled dispatch tick has passed, drawing from the source
+        /// stockpile and enqueuing an in-transit <see cref="PendingDelivery"/>. Each route reschedules
+        /// its next dispatch relative to now (never a backlog), and newly created/loaded routes are
+        /// scheduled lazily so their first delivery fires one full period after they appear.
+        /// </summary>
+        private void DispatchDueRoutes(FactionFC faction)
+        {
+            int now = Find.TickManager.TicksGame;
+            supplyRoutes.Sort((a, b) => a.priority.CompareTo(b.priority));
+            List<SupplyRoute> invalidRoutes = null;
+
+            foreach (SupplyRoute route in supplyRoutes)
+            {
+                if (!route.IsValid())
+                {
+                    if (invalidRoutes is null) invalidRoutes = new List<SupplyRoute>();
+                    invalidRoutes.Add(route);
+                    continue;
+                }
+
+                route.RecacheIfDirty();
+
+                // A freshly created/restored route (sentinel -1) is due immediately on this first
+                // daily tick; thereafter it dispatches once per frequency period.
+                if (route.nextDispatchTick < 0)
+                    route.nextDispatchTick = now;
+
+                if (now < route.nextDispatchTick) continue;
+
+                WorldObjectComp_SupplyChain sourceComp = GetComp(route.source);
+                IStockpile sourceStockpile = sourceComp?.GetStockpile();
+                if (sourceStockpile != null)
+                {
+                    PendingDelivery d = route.TryDispatch(sourceStockpile);
+                    if (d != null)
+                    {
+                        pendingDeliveries.Add(d);
+                        LogSC.Message($"Dispatched {d.amount} {route.resource.label} from {route.source.Name} -> {route.destination.Name}, arriving in {(d.arrivalTick - now).ToStringTicksToPeriod()}");
+                    }
+                }
+
+                route.nextDispatchTick = now + route.frequencyDays * GenDate.TicksPerDay;
+            }
+
+            if (invalidRoutes != null)
+            {
+                foreach (SupplyRoute route in invalidRoutes)
+                    supplyRoutes.Remove(route);
+                DirtyFlowCache();
+            }
+        }
+
+        /// <summary>
+        /// Recomputes trade-network partner/hub bonuses from the route topology (a pair counts as
+        /// connected if a valid route links them), independent of whether a delivery fired today —
+        /// dispatches are now staggered across days, so per-transfer counting would flicker.
+        /// </summary>
+        private void UpdateNetworkBonusesFromTopology(FactionFC faction)
+        {
+            Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>> networkOut =
+                new Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>>();
+            Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>> networkIn =
+                new Dictionary<WorldSettlementFC, HashSet<WorldSettlementFC>>();
+
+            foreach (SupplyRoute route in supplyRoutes)
+            {
+                if (!route.IsValid()) continue;
+
+                if (!networkOut.TryGetValue(route.source, out HashSet<WorldSettlementFC> outSet))
+                {
+                    outSet = new HashSet<WorldSettlementFC>();
+                    networkOut[route.source] = outSet;
+                }
+                outSet.Add(route.destination);
+
+                if (!networkIn.TryGetValue(route.destination, out HashSet<WorldSettlementFC> inSet))
+                {
+                    inSet = new HashSet<WorldSettlementFC>();
+                    networkIn[route.destination] = inSet;
+                }
+                inSet.Add(route.source);
+            }
+
+            foreach (WorldSettlementFC settlement in faction.settlements)
+            {
+                WorldObjectComp_SupplyChain netComp = GetComp(settlement);
+                if (netComp is null) continue;
+
+                networkOut.TryGetValue(settlement, out HashSet<WorldSettlementFC> outP);
+                networkIn.TryGetValue(settlement, out HashSet<WorldSettlementFC> inP);
+
+                int outCount = outP?.Count ?? 0;
+                int inCount = inP?.Count ?? 0;
+
+                int partners;
+                if (outP != null && inP != null)
+                {
+                    HashSet<WorldSettlementFC> all = new HashSet<WorldSettlementFC>(outP);
+                    foreach (WorldSettlementFC s in inP)
+                        all.Add(s);
+                    partners = all.Count;
+                }
+                else
+                {
+                    partners = outCount + inCount;
+                }
+
+                int hub = outCount < inCount ? outCount : inCount;
+                netComp.SetNetworkInfo(partners, hub);
+            }
+        }
+
+        /// <summary>Debug: dispatch every route now, ignoring its schedule.</summary>
+        public void DebugForceDispatchAllRoutes()
+        {
+            FactionFC faction = FindFC.FactionComp;
+            if (faction is null || mode != SupplyChainMode.Complex) return;
+            int now = Find.TickManager.TicksGame;
+            foreach (SupplyRoute route in supplyRoutes)
+                route.nextDispatchTick = now;
+            DispatchDueRoutes(faction);
+            DirtyFlowCache();
+        }
+
+        /// <summary>Debug: force every in-transit delivery to arrive now.</summary>
+        public void DebugForceArriveAllDeliveries()
+        {
+            FactionFC faction = FindFC.FactionComp;
+            if (faction is null || mode != SupplyChainMode.Complex) return;
+            int now = Find.TickManager.TicksGame;
+            foreach (PendingDelivery d in pendingDeliveries)
+                d.arrivalTick = now;
+            ProcessArrivals(faction);
             DirtyFlowCache();
         }
 
@@ -996,6 +1116,9 @@ namespace FactionColonies.SupplyChain
             // Remove routes referencing this settlement
             supplyRoutes.RemoveAll(r => r.source == settlement || r.destination == settlement);
             dormantRoutes.RemoveAll(r => r.source == settlement || r.destination == settlement);
+            // Drop in-transit deliveries bound for this settlement (can no longer be credited).
+            // Leave deliveries that merely originated here — the goods already left and are en route.
+            pendingDeliveries.RemoveAll(d => d.destination == settlement);
             InvalidateAllRoutes();
             capsAndStockpilesDirty = true;
             DirtyFlowCache();
@@ -1431,15 +1554,16 @@ namespace FactionColonies.SupplyChain
             // Tab bar
             float tabY = inner.y + 38f;
             float tabH = 24f;
-            float tabW = inner.width / 2f;
+            float tabW = inner.width / 3f;
             string[] tabLabels =
             {
                 "SC_TabStockpiles".Translate(),
-                "SC_TabRoutes".Translate()
+                "SC_TabRoutes".Translate(),
+                "SC_TabDeliveries".Translate()
             };
 
             Rect chosenRect = new Rect();
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 3; i++)
             {
                 Rect tabRect = new Rect(inner.x + tabW * i, tabY, tabW, tabH);
                 if (UIUtil.ButtonFlat(tabRect, tabLabels[i], highlighted: complexTab == i))
@@ -1457,8 +1581,10 @@ namespace FactionColonies.SupplyChain
 
             if (complexTab == 0)
                 DrawComplexStockpiles(contentRect);
-            else
+            else if (complexTab == 1)
                 DrawComplexRoutes(contentRect);
+            else
+                DrawComplexDeliveries(contentRect);
         }
 
         private void DrawComplexStockpiles(Rect rect)
@@ -1733,10 +1859,11 @@ namespace FactionColonies.SupplyChain
                 float removeX = rowW - 64f;
                 float effX = removeX - 70f;
                 float amtX = effX - 110f;
+                float freqX = amtX - 60f;
 
                 // Source / Arrow / Dest columns
                 float routeTextX = cx + 108f;
-                float routeTextW = amtX - routeTextX - 4f;
+                float routeTextW = freqX - routeTextX - 4f;
                 float arrowW = 24f;
                 float nameColW = (routeTextW - arrowW) / 2f;
 
@@ -1746,6 +1873,9 @@ namespace FactionColonies.SupplyChain
                 Widgets.Label(new Rect(routeTextX + nameColW, curY, arrowW, routeRowH), "\u2192");
                 Text.Anchor = TextAnchor.MiddleLeft;
                 Widgets.Label(new Rect(routeTextX + nameColW + arrowW, curY, nameColW, routeRowH), route.destination.Name);
+
+                // Frequency stepper: [-] Nd [+]
+                DeliveryUIUtil.DrawFrequencyStepper(new Rect(freqX, curY, 58f, routeRowH), route, DirtyFlowCache);
 
                 Widgets.Label(new Rect(amtX, curY, 106f, routeRowH),
                     "SC_PerPeriod".Translate(route.amountPerPeriod.ToString("F1")));
@@ -1783,6 +1913,13 @@ namespace FactionColonies.SupplyChain
             ScrollUtil.EndScrollView();
         }
 
+        // --- Deliveries (Complex mode, faction-wide) ---
+
+        private void DrawComplexDeliveries(Rect rect)
+        {
+            DeliveryUIUtil.DrawDeliveriesList(rect, ref scrollPosDeliveries, pendingDeliveries, null);
+        }
+
         // --- Add Route Row (Complex mode) ---
 
         private void DrawAddRouteRow(Rect viewRect, ref float curY, FactionFC faction)
@@ -1793,7 +1930,7 @@ namespace FactionColonies.SupplyChain
             Widgets.Label(new Rect(0f, curY, 70f, 26f), "SC_NewRoute".Translate());
 
             // Calculate dynamic picker widths
-            float fixedW = 74f + 114f + 78f + 54f; // label + resource+gap + amount+gap + add
+            float fixedW = 74f + 114f + 78f + 52f + 54f; // label + resource+gap + amount+gap + freq+gap + add
             float remainW = viewRect.width - fixedW - 8f;
             float pickerW = remainW / 2f;
             if (pickerW < 140f) pickerW = 140f;
@@ -1869,6 +2006,13 @@ namespace FactionColonies.SupplyChain
                 ref newRouteAmount, ref newRouteAmountBuffer, 0f, 9999f);
             bx += 74f;
 
+            // Frequency (days between deliveries)
+            Rect freqRect = new Rect(bx, curY, 44f, 24f);
+            Widgets.TextFieldNumeric(freqRect, ref newRouteFrequency, ref newRouteFreqBuffer,
+                SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
+            TooltipHandler.TipRegion(freqRect, "SC_FrequencyTooltip".Translate());
+            bx += 48f;
+
             // Confirm
             if (Widgets.ButtonText(new Rect(bx, curY, 50f, 24f), "SC_Add".Translate()))
             {
@@ -1876,6 +2020,8 @@ namespace FactionColonies.SupplyChain
                     && newRouteAmount > 0 && newRouteSource != newRouteDest)
                 {
                     SupplyRoute route = new SupplyRoute(newRouteSource, newRouteDest, newRouteResource, newRouteAmount);
+                    route.frequencyDays = Mathf.Clamp(newRouteFrequency,
+                        SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
                     supplyRoutes.Add(route);
                     DirtyFlowCache();
 

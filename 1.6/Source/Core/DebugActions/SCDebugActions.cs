@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using LudeonTK;
 using Verse;
+using RimWorld;
 
 namespace FactionColonies.SupplyChain
 {
@@ -101,32 +102,26 @@ namespace FactionColonies.SupplyChain
             Log.Message("[Empire-SupplyChain] Debug: Needs resolved.");
         }
 
-        [DebugAction("Empire Refactored: Routes & Resources", "Force execute routes", allowedGameStates = AllowedGameStates.Playing)]
-        private static void ForceExecuteRoutes()
+        [DebugAction("Empire Refactored: Routes & Resources", "Force dispatch all due routes", allowedGameStates = AllowedGameStates.Playing)]
+        private static void ForceDispatchAllRoutes()
         {
             WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
             if (comp == null || comp.Mode != SupplyChainMode.Complex) return;
 
-            int count = 0;
-            foreach (SupplyRoute route in comp.SupplyRoutes)
-            {
-                if (!route.IsValid()) continue;
-                route.RecacheIfDirty();
+            comp.DebugForceDispatchAllRoutes();
+            Log.Message("[Empire-SupplyChain] Debug: Dispatched all routes now; "
+                + comp.PendingDeliveries.Count + " deliveries in transit.");
+        }
 
-                WorldObjectComp_SupplyChain srcComp = SupplyChainCache.GetSettlementComp(route.source);
-                WorldObjectComp_SupplyChain destComp = SupplyChainCache.GetSettlementComp(route.destination);
-                if (srcComp == null || destComp == null) continue;
+        [DebugAction("Empire Refactored: Routes & Resources", "Force arrive all deliveries", allowedGameStates = AllowedGameStates.Playing)]
+        private static void ForceArriveAllDeliveries()
+        {
+            WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
+            if (comp == null || comp.Mode != SupplyChainMode.Complex) return;
 
-                IStockpile srcStockpile = srcComp.GetStockpile();
-                IStockpile destStockpile = destComp.GetStockpile();
-                if (srcStockpile == null || destStockpile == null) continue;
-
-                double transferred = route.Execute(srcStockpile, destStockpile);
-                Log.Message("[Empire-SupplyChain] Debug: Route " + route.source.Name + " -> " + route.destination.Name
-                    + " (" + route.resource.label + "): transferred " + transferred.ToString("F1"));
-                count++;
-            }
-            Log.Message("[Empire-SupplyChain] Debug: Executed " + count + " routes.");
+            int count = comp.PendingDeliveries.Count;
+            comp.DebugForceArriveAllDeliveries();
+            Log.Message("[Empire-SupplyChain] Debug: Forced arrival of " + count + " deliveries.");
         }
 
         [DebugAction("Empire Refactored: Routes & Resources", "Force execute sell orders", allowedGameStates = AllowedGameStates.Playing)]
@@ -185,7 +180,17 @@ namespace FactionColonies.SupplyChain
                     route.RecacheIfDirty();
                     sb.AppendLine("    " + route.source.Name + " -> " + route.destination.Name
                         + " (" + route.resource.label + " x" + route.amountPerPeriod.ToString("F1")
-                        + ", eff=" + route.CachedEfficiency.ToString("F2") + ")");
+                        + ", every " + route.frequencyDays + "d, eff=" + route.CachedEfficiency.ToString("F2") + ")");
+                }
+
+                sb.AppendLine("  In-transit deliveries: " + comp.PendingDeliveries.Count);
+                foreach (PendingDelivery d in comp.PendingDeliveries)
+                {
+                    string src = d.source != null ? d.source.Name : "?";
+                    string dst = d.destination != null ? d.destination.Name : "?";
+                    string res = d.resource != null ? d.resource.label : "?";
+                    sb.AppendLine("    " + src + " -> " + dst + " (" + res + " x" + d.amount.ToString("F1")
+                        + ", eff=" + d.efficiency.ToString("F2") + ", ETA " + d.TicksRemaining.ToStringTicksToPeriod() + ")");
                 }
             }
 

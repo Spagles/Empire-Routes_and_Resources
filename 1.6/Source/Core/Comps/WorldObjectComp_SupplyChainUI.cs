@@ -46,12 +46,15 @@ namespace FactionColonies.SupplyChain
         private Vector2 scrollPosProduction;
         private Vector2 scrollPosOrders;
         private Vector2 scrollPosRoutes;
+        private Vector2 scrollPosDeliveries;
 
         // Route creation state
         private WorldSettlementFC newRouteOther;
         private ResourceTypeDef newRouteResource;
         private string newRouteAmountBuffer = "";
         private float newRouteAmount;
+        private int newRouteFrequency = SupplyChainSettings.defaultRouteFrequencyDays;
+        private string newRouteFreqBuffer = "";
         private bool newRouteIsOutgoing = true;
         private ResourceTypeDef routeFilterResource;
 
@@ -104,10 +107,13 @@ namespace FactionColonies.SupplyChain
             scrollPosProduction = Vector2.zero;
             scrollPosOrders = Vector2.zero;
             scrollPosRoutes = Vector2.zero;
+            scrollPosDeliveries = Vector2.zero;
             newRouteOther = null;
             newRouteResource = null;
             newRouteAmountBuffer = "";
             newRouteAmount = 0;
+            newRouteFrequency = SupplyChainSettings.defaultRouteFrequencyDays;
+            newRouteFreqBuffer = "";
             newRouteIsOutgoing = true;
             routeFilterResource = null;
         }
@@ -315,18 +321,19 @@ namespace FactionColonies.SupplyChain
         {
             // Sub-tab bar
             float tabH = 24f;
-            float tabW = boundingBox.width / 5f;
+            float tabW = boundingBox.width / 6f;
             string[] tabLabels =
             {
                 "SC_SubStockpile".Translate(),
                 "SC_SubNeeds".Translate(),
                 "SC_SubProduction".Translate(),
                 "SC_SubOrders".Translate(),
-                "SC_SubRoutes".Translate()
+                "SC_SubRoutes".Translate(),
+                "SC_SubDeliveries".Translate()
             };
 
             Rect chosenRect = new Rect();
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 6; i++)
             {
                 Rect tabRect = new Rect(boundingBox.x + tabW * i, boundingBox.y, tabW, tabH);
                 if (UIUtil.ButtonFlat(tabRect, tabLabels[i], highlighted: complexSubTab == i))
@@ -354,8 +361,10 @@ namespace FactionColonies.SupplyChain
                 DrawComplexProduction(contentRect);
             else if (complexSubTab == 3)
                 DrawComplexOrders(contentRect);
-            else
+            else if (complexSubTab == 4)
                 DrawComplexRoutes(contentRect);
+            else
+                DrawComplexDeliveries(contentRect);
 
             // Bottom status bar
             if (statusBarH > 0f)
@@ -796,7 +805,7 @@ namespace FactionColonies.SupplyChain
                 GUI.color = Color.white;
 
                 // Calculation pipeline: qty → eff% → net
-                float pipeX = viewRect.width - 190f;
+                float pipeX = viewRect.width - 250f;
                 float netVal = (float)(route.amountPerPeriod * route.CachedEfficiency);
 
                 string otherName = isOutgoing ? route.destination.Name : route.source.Name;
@@ -827,6 +836,9 @@ namespace FactionColonies.SupplyChain
                 Widgets.Label(new Rect(pipeX, curY, 34f, 26f), netVal.ToString("F1"));
                 GUI.color = Color.white;
 
+                // Frequency stepper: [-] Nd [+]
+                DeliveryUIUtil.DrawFrequencyStepper(new Rect(viewRect.width - 88f, curY, 58f, 28f), route, wc.DirtyFlowCache);
+
                 // Remove button
                 if (Widgets.ButtonText(new Rect(viewRect.width - 24f, curY + 1f, 22f, 24f), "X"))
                     routeToRemove = route;
@@ -854,6 +866,19 @@ namespace FactionColonies.SupplyChain
             }
 
             ScrollUtil.EndScrollView();
+        }
+
+        // --- Complex Sub-Tab 5: Deliveries (in-transit, filtered to this settlement) ---
+
+        private void DrawComplexDeliveries(Rect rect)
+        {
+            WorldComponent_SupplyChain wc = SupplyChainCache.Comp;
+            if (wc is null) return;
+
+            WorldSettlementFC ws = WorldSettlement;
+            if (ws is null) return;
+
+            DeliveryUIUtil.DrawDeliveriesList(rect, ref scrollPosDeliveries, wc.PendingDeliveries, ws);
         }
 
         // --- Complex Mode: Add Route (settlement-contextual) ---
@@ -888,7 +913,7 @@ namespace FactionColonies.SupplyChain
             bx += 114f;
 
             // Other settlement picker
-            float pickerW = viewRect.width - bx - 74f - 54f - 8f;
+            float pickerW = viewRect.width - bx - 74f - 52f - 54f - 8f;
             if (pickerW < 120f) pickerW = 120f;
 
             string otherLabel = newRouteOther != null
@@ -937,6 +962,13 @@ namespace FactionColonies.SupplyChain
                 ref newRouteAmount, ref newRouteAmountBuffer, 0f, 9999f);
             bx += 74f;
 
+            // Frequency (days between deliveries)
+            Rect freqRect = new Rect(bx, curY, 44f, 24f);
+            Widgets.TextFieldNumeric(freqRect, ref newRouteFrequency, ref newRouteFreqBuffer,
+                SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
+            TooltipHandler.TipRegion(freqRect, "SC_FrequencyTooltip".Translate());
+            bx += 48f;
+
             // Add button
             if (Widgets.ButtonText(new Rect(bx, curY, 50f, 24f), "SC_Add".Translate()))
             {
@@ -945,6 +977,8 @@ namespace FactionColonies.SupplyChain
                     WorldSettlementFC src = newRouteIsOutgoing ? ws : newRouteOther;
                     WorldSettlementFC dest = newRouteIsOutgoing ? newRouteOther : ws;
                     SupplyRoute route = new SupplyRoute(src, dest, newRouteResource, newRouteAmount);
+                    route.frequencyDays = Mathf.Clamp(newRouteFrequency,
+                        SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
                     wc.SupplyRoutes.Add(route);
                     wc.DirtyFlowCache();
 
@@ -992,7 +1026,7 @@ namespace FactionColonies.SupplyChain
             bx += 114f;
 
             // Other settlement picker
-            float pickerW = width - (bx - x) - 74f - 54f - 8f;
+            float pickerW = width - (bx - x) - 74f - 52f - 54f - 8f;
             if (pickerW < 120f) pickerW = 120f;
 
             string otherLabel = newRouteOther != null
@@ -1039,6 +1073,13 @@ namespace FactionColonies.SupplyChain
                 ref newRouteAmount, ref newRouteAmountBuffer, 0f, 9999f);
             bx += 74f;
 
+            // Frequency (days between deliveries)
+            Rect freqRect = new Rect(bx, curY, 44f, 24f);
+            Widgets.TextFieldNumeric(freqRect, ref newRouteFrequency, ref newRouteFreqBuffer,
+                SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
+            TooltipHandler.TipRegion(freqRect, "SC_FrequencyTooltip".Translate());
+            bx += 48f;
+
             // Add button
             if (Widgets.ButtonText(new Rect(bx, curY, 50f, 24f), "SC_Add".Translate()))
             {
@@ -1047,6 +1088,8 @@ namespace FactionColonies.SupplyChain
                     WorldSettlementFC src = newRouteIsOutgoing ? ws : newRouteOther;
                     WorldSettlementFC dest = newRouteIsOutgoing ? newRouteOther : ws;
                     SupplyRoute route = new SupplyRoute(src, dest, newRouteResource, newRouteAmount);
+                    route.frequencyDays = Mathf.Clamp(newRouteFrequency,
+                        SupplyChainSettings.minRouteFrequencyDays, SupplyChainSettings.maxRouteFrequencyDays);
                     wc.SupplyRoutes.Add(route);
                     wc.DirtyFlowCache();
 

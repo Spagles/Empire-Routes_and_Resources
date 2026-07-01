@@ -25,6 +25,11 @@ namespace FactionColonies.SupplyChain
         public static int baseSilverSurcharge = (int)FCSettings.silverToCreateSettlement; //1000, as of 2026-04-05
         public static float resourceCostMultiplier = 1.0f;
 
+        // Delivery frequency bounds are fixed; only the default (applied to newly created routes) is configurable.
+        public const int minRouteFrequencyDays = 1;
+        public const int maxRouteFrequencyDays = 60;
+        public static int defaultRouteFrequencyDays = 5;
+
         private static string capBuffer = null;
         private static string routeDecayBuffer = null;
         private static string localCapBuffer = null;
@@ -32,6 +37,7 @@ namespace FactionColonies.SupplyChain
         private static string distNormBuffer = null;
         private static string surchargeBuffer = null;
         private static string resourceCostMultBuffer = null;
+        private static string routeFreqBuffer = null;
         private static Vector2 scrollPos;
 
         public override void ExposeData()
@@ -49,6 +55,7 @@ namespace FactionColonies.SupplyChain
             Scribe_Values.Look(ref distanceNormalizingDays, "distanceNormalizingDays", DEFAULT_DISTANCE_NORMALIZING_DAYS);
             Scribe_Values.Look(ref baseSilverSurcharge, "baseSilverSurcharge", 500);
             Scribe_Values.Look(ref resourceCostMultiplier, "resourceCostMultiplier", 1.0f);
+            Scribe_Values.Look(ref defaultRouteFrequencyDays, "defaultRouteFrequencyDays", 5);
         }
 
         public void DoWindowContents(Rect inRect)
@@ -113,6 +120,12 @@ namespace FactionColonies.SupplyChain
             if (localCapBuffer == null)
                 localCapBuffer = localCapBase.ToString("F0");
             ls.TextFieldNumeric(ref localCapBase, ref localCapBuffer, 10f, 500f);
+            ls.Gap(12f);
+
+            ls.Label("SC_SettingsDefaultRouteFreq".Translate(defaultRouteFrequencyDays.ToString()));
+            if (routeFreqBuffer == null)
+                routeFreqBuffer = defaultRouteFrequencyDays.ToString();
+            ls.TextFieldNumeric(ref defaultRouteFrequencyDays, ref routeFreqBuffer, minRouteFrequencyDays, maxRouteFrequencyDays);
             ls.Gap(12f);
 
             // Founding cost settings
