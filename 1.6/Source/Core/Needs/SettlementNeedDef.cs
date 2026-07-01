@@ -95,6 +95,7 @@ namespace FactionColonies.SupplyChain
         public double baseAmount;
         public NeedScaling scaling = NeedScaling.Flat;
         public TechLevel minTechLevel = TechLevel.Undefined;
+        public TechLevel maxTechLevel = TechLevel.Undefined;
         public List<WorldSettlementDef> allowedSettlementTypes;
         public List<WorldSettlementDef> blockedSettlementTypes;
         public List<NeedPenalty> penalties;
@@ -103,11 +104,21 @@ namespace FactionColonies.SupplyChain
 
         public bool IsActiveForFaction(FactionFC faction)
         {
-            return minTechLevel == TechLevel.Undefined || faction?.techLevel >= minTechLevel;
+            return (minTechLevel == TechLevel.Undefined || faction?.techLevel >= minTechLevel) &&
+                   (maxTechLevel == TechLevel.Undefined || faction?.techLevel <= maxTechLevel);
         }
 
+        /// <summary>
+        /// True when this need applies to the given settlement: the faction meets the need's tech
+        /// gate (<see cref="IsActiveForFaction"/>) AND the settlement's type passes the allowed/blocked
+        /// filters. Folds the faction gate in so callers make a single activation check — pairing two
+        /// separate checks per callsite is how a settlement-type-restricted need can leak into one path
+        /// but not another.
+        /// </summary>
         public bool IsActiveForSettlement(WorldSettlementFC settlement)
         {
+            if (!IsActiveForFaction(FindFC.FactionComp)) return false;
+
             bool allowed = allowedSettlementTypes is null || allowedSettlementTypes.Count == 0
                 || settlement.settlementDef.IsInList(allowedSettlementTypes);
             bool blocked = settlement.settlementDef.IsInList(blockedSettlementTypes);

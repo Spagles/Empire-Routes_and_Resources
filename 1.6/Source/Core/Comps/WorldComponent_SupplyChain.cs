@@ -510,7 +510,7 @@ namespace FactionColonies.SupplyChain
             TechLevel tech = faction.techLevel;
             foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
             {
-                if (!needDef.IsActiveForFaction(faction)) continue;
+                if (!needDef.IsActiveForSettlement(settlement)) continue;
                 if (needDef.UsesResource(def))
                     flow.baseNeeds += needDef.CalculateDemand(settlement) * needDef.GetResourceFraction(tech, def);
             }
@@ -2009,6 +2009,7 @@ namespace FactionColonies.SupplyChain
                     {
                         foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
                         {
+                            if (!needDef.IsActiveForSettlement(captured)) continue;
                             if (needDef.UsesResource(newRouteResource))
                             {
                                 double demand = needDef.CalculateDemand(captured)

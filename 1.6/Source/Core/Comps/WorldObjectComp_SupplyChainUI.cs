@@ -934,6 +934,7 @@ namespace FactionColonies.SupplyChain
                             // Show need info for destination
                             foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
                             {
+                                if (!needDef.IsActiveForSettlement(captured)) continue;
                                 if (needDef.UsesResource(newRouteResource))
                                 {
                                     double demand = needDef.CalculateDemand(captured)
@@ -1046,6 +1047,7 @@ namespace FactionColonies.SupplyChain
                         {
                             foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
                             {
+                                if (!needDef.IsActiveForSettlement(captured)) continue;
                                 if (needDef.UsesResource(newRouteResource))
                                 {
                                     double demand = needDef.CalculateDemand(captured)

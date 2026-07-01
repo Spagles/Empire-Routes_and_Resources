@@ -99,7 +99,6 @@ namespace FactionColonies.SupplyChain
             // 1. Base settlement needs (from SettlementNeedDefs)
             foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
             {
-                if (!needDef.IsActiveForFaction(faction)) continue;
                 if (!needDef.IsActiveForSettlement(ws)) continue;
 
                 needDef.BuildNeedStates(ws, faction, 0.0, delegate(NeedState ns)

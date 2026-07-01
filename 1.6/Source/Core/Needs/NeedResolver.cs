@@ -25,7 +25,6 @@ namespace FactionColonies.SupplyChain
             FactionFC faction = FindFC.FactionComp;
             foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
             {
-                if (faction != null && !needDef.IsActiveForFaction(faction)) continue;
                 if (!needDef.IsActiveForSettlement(settlement)) continue;
 
                 needDef.BuildNeedStates(settlement, faction, 0.0, delegate(NeedState ns)
@@ -73,7 +72,6 @@ namespace FactionColonies.SupplyChain
                 // Base needs
                 foreach (SettlementNeedDef needDef in SupplyChainCache.AllNeedDefs)
                 {
-                    if (!needDef.IsActiveForFaction(faction)) continue;
                     if (!needDef.IsActiveForSettlement(settlement)) continue;
 
                     WorldSettlementFC capturedSettlement = settlement;
