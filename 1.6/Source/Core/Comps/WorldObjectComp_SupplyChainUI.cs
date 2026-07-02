@@ -763,7 +763,10 @@ namespace FactionColonies.SupplyChain
                 if (!newRouteIsOutgoing && !isIncoming) continue;
                 if (routeFilterResource != null && route.resource != routeFilterResource) continue;
 
-                route.RecacheIfDirty();
+                // Cheap efficiency refresh only — the expensive travel-time/path pathfind is warmed off
+                // the UI thread by SupplyRouteWarmer; show a placeholder until it's ready.
+                route.RecacheEfficiencyIfDirty();
+                bool pathReady = route.PathReady;
 
                 Rect rowRect = new Rect(0f, curY, viewRect.width, 28f);
                 if (routeIdx % 2 == 0) Widgets.DrawHighlight(rowRect);
@@ -771,7 +774,7 @@ namespace FactionColonies.SupplyChain
                 // Dual accent bars: resource color + efficiency color
                 float eff = (float)route.CachedEfficiency;
                 Color routeAccent = route.resource?.color ?? Color.gray;
-                Color effAccent = AccentUtil.GetStatColor(eff * 100f, false);
+                Color effAccent = pathReady ? AccentUtil.GetStatColor(eff * 100f, false) : Color.gray;
                 Widgets.DrawBoxSolid(new Rect(0f, curY, AccentW, 28f), routeAccent);
                 Widgets.DrawBoxSolid(new Rect(AccentW + 2f, curY, AccentW, 28f), effAccent);
 
@@ -822,7 +825,10 @@ namespace FactionColonies.SupplyChain
                 // Efficiency
                 Rect efficiencyRect = new Rect(pipeX, curY, 52f, 26f);
                 GUI.color = effAccent;
-                Widgets.Label(efficiencyRect, "SC_EffLabel".Translate((eff * 100).ToString("F0")));
+                if (pathReady)
+                    Widgets.Label(efficiencyRect, "SC_EffLabel".Translate((eff * 100).ToString("F0")));
+                else
+                    Widgets.Label(efficiencyRect, "SC_RoutePending".Translate());
                 GUI.color = Color.white;
                 TooltipHandler.TipRegion(efficiencyRect, "SC_EffTooltip_Route".Translate());
                 pipeX += 52f;
@@ -833,7 +839,10 @@ namespace FactionColonies.SupplyChain
 
                 // Net value
                 GUI.color = effAccent;
-                Widgets.Label(new Rect(pipeX, curY, 34f, 26f), netVal.ToString("F1"));
+                if (pathReady)
+                    Widgets.Label(new Rect(pipeX, curY, 34f, 26f), netVal.ToString("F1"));
+                else
+                    Widgets.Label(new Rect(pipeX, curY, 34f, 26f), "SC_RoutePending".Translate());
                 GUI.color = Color.white;
 
                 // Frequency stepper: [-] Nd [+]

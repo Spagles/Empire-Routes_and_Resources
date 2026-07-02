@@ -21,14 +21,23 @@ namespace FactionColonies.SupplyChain
         public int frequencyDays = SupplyChainSettings.defaultRouteFrequencyDays;
         public int nextDispatchTick = -1;
 
-        // Cached (not saved)
+        // Cached (not saved). Two independent dirty tiers:
+        //  - pathDirty: cachedTravelTicks + cachedPathTiles need the expensive A* world pathfind. Only the
+        //    endpoints' tiles and the road network affect these, so they change rarely (route created,
+        //    loaded, roads change, pods research). Recomputed off the main thread by SupplyRouteWarmer.
+        //  - efficiencyDirty: cachedEfficiency needs recompute from the cached travel time plus settlement
+        //    stats / modifier hooks. Cheap, main-thread only (touches faction stat aggregation).
         private int cachedTravelTicks;
         private double cachedEfficiency;
         private List<PlanetTile> cachedPathTiles;
-        private bool dirty = true;
+        private bool pathDirty = true;
+        private bool efficiencyDirty = true;
 
         public int CachedTravelTicks => cachedTravelTicks;
         public double CachedEfficiency => cachedEfficiency;
+
+        /// <summary>True once the travel time / path has been computed (UI shows a placeholder until then).</summary>
+        public bool PathReady => !pathDirty;
 
         // Ordered overland tile path (source -> destination) for this route, or null when travel is
         // straight-line (pods/shuttle/cross-layer). Captured for free from the travel-time recache below.
@@ -47,7 +56,7 @@ namespace FactionColonies.SupplyChain
             this.amountPerPeriod = amountPerPeriod;
             this.priority = priority;
 
-            dirty = true;
+            MarkPathDirty();
         }
 
         /// <summary>
@@ -72,25 +81,69 @@ namespace FactionColonies.SupplyChain
                 && !source.Destroyed && !destination.Destroyed;
         }
 
-        public void SetDirty()
+        /// <summary>Mark the travel time / path (and therefore efficiency) as needing recompute.</summary>
+        public void MarkPathDirty()
         {
-            dirty = true;
+            pathDirty = true;
+            efficiencyDirty = true;
         }
 
-        public void RecacheIfDirty()
+        /// <summary>Mark only the (cheap) efficiency as needing recompute — used when stats change but the
+        /// road path does not (e.g. founding/removing a settlement).</summary>
+        public void MarkEfficiencyDirty()
         {
-            if (!dirty) return;
-            dirty = false;
+            efficiencyDirty = true;
+        }
+
+        /// <summary>
+        /// Main-thread: apply a travel time + path computed elsewhere (the background warmer, or a
+        /// synchronous recompute). Clears the path-dirty flag and forces an efficiency recompute.
+        /// </summary>
+        public void ApplyPathResult(int travelTicks, List<PlanetTile> path)
+        {
+            cachedTravelTicks = travelTicks;
+            cachedPathTiles = path;
+            pathDirty = false;
+            efficiencyDirty = true;
+        }
+
+        /// <summary>
+        /// Main-thread synchronous path recompute (runs the A* world pathfind). Prefer the background
+        /// <see cref="SupplyRouteWarmer"/>; this is the fallback for synchronous mode and on-demand dispatch.
+        /// </summary>
+        public void RecachePathSync()
+        {
+            if (!pathDirty) return;
 
             if (!IsValid())
             {
                 cachedTravelTicks = 0;
-                cachedEfficiency = 0.0;
                 cachedPathTiles = null;
+                cachedEfficiency = 0.0;
+                pathDirty = false;
+                efficiencyDirty = false;
                 return;
             }
 
-            cachedTravelTicks = TravelUtil.ReturnTicksToArrive(source.Tile, destination.Tile, out cachedPathTiles);
+            int ticks = TravelUtil.ReturnTicksToArrive(source.Tile, destination.Tile, out List<PlanetTile> path);
+            ApplyPathResult(ticks, path);
+        }
+
+        /// <summary>
+        /// Main-thread: recompute the cheap, stat-dependent efficiency from the cached travel time. No
+        /// pathfind. Skipped while the path is still dirty (a valid travel time isn't available yet).
+        /// </summary>
+        public void RecacheEfficiencyIfDirty()
+        {
+            if (!efficiencyDirty || pathDirty) return;
+            efficiencyDirty = false;
+
+            if (!IsValid())
+            {
+                cachedEfficiency = 0.0;
+                return;
+            }
+
             double travelDays = cachedTravelTicks / (double)GenDate.TicksPerDay;
             double baseEfficiency = FormulaUtil.RouteEfficiency(travelDays);
 
@@ -116,6 +169,13 @@ namespace FactionColonies.SupplyChain
             }
 
             cachedEfficiency = Math.Max(0.0, Math.Min(1.0, baseEfficiency));
+        }
+
+        /// <summary>Full synchronous warm (path + efficiency). Used by dispatch when a due route isn't ready.</summary>
+        public void RecacheIfDirty()
+        {
+            RecachePathSync();
+            RecacheEfficiencyIfDirty();
         }
 
         /// <summary>
@@ -163,7 +223,7 @@ namespace FactionColonies.SupplyChain
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
-                dirty = true;
+                MarkPathDirty();
             }
         }
     }

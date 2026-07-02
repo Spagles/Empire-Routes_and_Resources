@@ -26,6 +26,11 @@ namespace FactionColonies.SupplyChain
         // Monotonic id source giving each PendingDelivery a stable unique load id (for the caravan cross-ref).
         private int nextDeliveryId;
 
+        // Background recompute of route travel times/paths (transient). Fed each tick with the active
+        // routes; keeps their caches warm off the UI thread. lastSeenRoadVersion detects road changes.
+        private readonly SupplyRouteWarmer routeWarmer = new SupplyRouteWarmer();
+        private int lastSeenRoadVersion;
+
         // Route visualization (transient, not saved)
         public bool showAllRoutes;
         public bool showSelectedRoutes;
@@ -133,6 +138,10 @@ namespace FactionColonies.SupplyChain
                 RebuildAllPartnerSets(FindFC.FactionComp);
             ReconcileDeliveryCaravans();
 
+            // Routes are already path-dirty from load (PostLoadInit); align the road-version baseline so the
+            // first tick doesn't treat load as a spurious "roads changed" (the warmer will warm them anyway).
+            lastSeenRoadVersion = RouteRoadChangeTracker.Version;
+
             LogSC.MessageForce("WorldComponent_SupplyChain initialized (mode=" + mode + ", fromLoad=" + fromLoad + ")");
         }
 
@@ -184,6 +193,22 @@ namespace FactionColonies.SupplyChain
                 firstTick = false;
                 // Re-register in case ClearCaches ran after FinalizeInit (new game race condition)
                 RegisterWithRegistries();
+            }
+
+            // Keep route travel-time/path caches warm off the UI thread. Roads change incrementally, so
+            // poll the road-change counter and re-dirty every route's path when the network changes (a new
+            // road can shorten the best path for any route). Then let the warmer (background) reconcile.
+            if (mode == SupplyChainMode.Complex)
+            {
+                int roadVersion = RouteRoadChangeTracker.Version;
+                if (roadVersion != lastSeenRoadVersion)
+                {
+                    lastSeenRoadVersion = roadVersion;
+                    foreach (SupplyRoute route in supplyRoutes)
+                        route.MarkPathDirty();
+                    routeWarmer.Invalidate();
+                }
+                routeWarmer.Tick(supplyRoutes);
             }
         }
 
@@ -641,7 +666,7 @@ namespace FactionColonies.SupplyChain
             {
                 if (route.IsValid())
                 {
-                    route.SetDirty();
+                    route.MarkPathDirty();  // roads/tech may have changed while dormant
                     route.nextDispatchTick = -1; // re-stagger dispatch from the switch moment
                     LinkRoute(route);
                 }
@@ -1015,14 +1040,17 @@ namespace FactionColonies.SupplyChain
                     continue;
                 }
 
-                route.RecacheIfDirty();
-
                 // A freshly created/restored route (sentinel -1) is due immediately on this first
                 // daily tick; thereafter it dispatches once per frequency period.
                 if (route.nextDispatchTick < 0)
                     route.nextDispatchTick = now;
 
                 if (now < route.nextDispatchTick) continue;
+
+                // Due now — ensure travel time / path / efficiency are ready. Normally the background
+                // warmer has already computed them; this is the synchronous fallback (a no-op once warm),
+                // and only ever runs for the few routes actually dispatching this tick.
+                route.RecacheIfDirty();
 
                 WorldObjectComp_SupplyChain sourceComp = GetComp(route.source);
                 IStockpile sourceStockpile = sourceComp?.GetStockpile();
@@ -1279,12 +1307,22 @@ namespace FactionColonies.SupplyChain
             DirtyFlowCache();
             foreach (WorldSettlementFC settlement in faction.settlements)
                 GetComp(settlement)?.SyncAllAutoMaxAllocations();
+
+            // Transport-pods research changes the travel-time branch, so route paths may change. Re-warm
+            // them off the UI (and supersede any in-flight computation).
+            foreach (SupplyRoute route in supplyRoutes)
+                route.MarkPathDirty();
+            routeWarmer.Invalidate();
         }
 
+        // Settlement create/remove can change faction stats (hence route efficiency) but never moves an
+        // existing route's endpoints or roads — so only the cheap efficiency is invalidated here, not the
+        // expensive path. If founding a settlement kicks off road building, the OverlayRoad hook
+        // (RouteRoadChangeTracker) will mark paths dirty when roads actually change.
         private void InvalidateAllRoutes()
         {
             foreach (SupplyRoute route in supplyRoutes)
-                route.SetDirty();
+                route.MarkEfficiencyDirty();
         }
 
         // --- IMainTabWindowOverview (Faction Tab) ---
@@ -1943,14 +1981,17 @@ namespace FactionColonies.SupplyChain
                 if (routeFilterResource != null && route.resource != routeFilterResource)
                     continue;
 
-                route.RecacheIfDirty();
+                // Cheap efficiency refresh only — the expensive travel-time/path pathfind is warmed off
+                // the UI thread by SupplyRouteWarmer; show a placeholder until it's ready.
+                route.RecacheEfficiencyIfDirty();
+                bool pathReady = route.PathReady;
 
                 Rect rRow = new Rect(0f, curY, rowW, routeRowH);
                 if (rIdx % 2 == 0) Widgets.DrawHighlight(rRow);
 
                 float eff = (float)route.CachedEfficiency;
                 Color routeAccent = route.resource != null ? route.resource.color : Color.gray;
-                Color effAccent = AccentUtil.GetStatColor(eff * 100f, false);
+                Color effAccent = pathReady ? AccentUtil.GetStatColor(eff * 100f, false) : Color.gray;
                 Widgets.DrawBoxSolid(new Rect(0f, curY, accentW, routeRowH), routeAccent);
                 Widgets.DrawBoxSolid(new Rect(accentW + 2f, curY, accentW, routeRowH), effAccent);
 
@@ -1991,15 +2032,23 @@ namespace FactionColonies.SupplyChain
 
                 GUI.color = effAccent;
                 Rect effRect = new Rect(effX, curY, 66f, routeRowH);
-                Widgets.Label(effRect, "SC_EfficiencyPercent".Translate((eff * 100).ToString("F0")));
-                GUI.color = Color.white;
+                if (pathReady)
+                {
+                    Widgets.Label(effRect, "SC_EfficiencyPercent".Translate((eff * 100).ToString("F0")));
+                    GUI.color = Color.white;
 
-                double travelDays = route.CachedTravelTicks / (double)GenDate.TicksPerDay;
-                TooltipHandler.TipRegion(effRect,
-                    "SC_EfficiencyTooltip".Translate(
-                        travelDays.ToString("F1"),
-                        SupplyChainSettings.routeDecayPerDay.ToString("F2"),
-                        (eff * 100).ToString("F1")));
+                    double travelDays = route.CachedTravelTicks / (double)GenDate.TicksPerDay;
+                    TooltipHandler.TipRegion(effRect,
+                        "SC_EfficiencyTooltip".Translate(
+                            travelDays.ToString("F1"),
+                            SupplyChainSettings.routeDecayPerDay.ToString("F2"),
+                            (eff * 100).ToString("F1")));
+                }
+                else
+                {
+                    Widgets.Label(effRect, "SC_RoutePending".Translate());
+                    GUI.color = Color.white;
+                }
 
                 if (Widgets.ButtonText(new Rect(removeX, curY + 4f, 60f, routeRowH - 8f), "SC_Remove".Translate()))
                 {

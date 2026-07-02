@@ -139,12 +139,17 @@
     <SC_SettingsAnimateArrows>Animate route arrows on world map</SC_SettingsAnimateArrows>
     <SC_SettingsUseDeliveryCaravans>Show supply deliveries as caravans</SC_SettingsUseDeliveryCaravans>
     <SC_SettingsUseDeliveryCaravansTip>When enabled, in-transit supply deliveries appear as caravan-like objects that travel along roads and terrain on the world map. When disabled, deliveries are resolved abstractly with no world-map object.</SC_SettingsUseDeliveryCaravansTip>
+    <SC_SettingsThreadedRoutes>Compute route paths on a background thread</SC_SettingsThreadedRoutes>
+    <SC_SettingsThreadedRoutesTip>Route travel times are recomputed (a world pathfind) when routes are created, on load, and whenever roads change. When enabled, this runs on a background thread so it never stalls the game; route efficiency fills in a moment later.\n\nDisable to compute synchronously on the main thread instead (simpler, but can cause a brief hitch when many routes recompute at once).</SC_SettingsThreadedRoutesTip>
     <SC_SettingsUseMaxWorkers>Base worker needs on total population instead of assigned workers</SC_SettingsUseMaxWorkers>
 
     <!-- Delivery caravan inspect strings -->
     <SC_DeliveryCaravanRoute>From {0} to {1}</SC_DeliveryCaravanRoute>
     <SC_DeliveryCaravanCargo>{0}: {1}</SC_DeliveryCaravanCargo>
     <SC_DeliveryCaravanETA>Arrives in {0}</SC_DeliveryCaravanETA>
+
+    <!-- Shown in the routes list while a route's travel time is still being computed off-thread -->
+    <SC_RoutePending>...</SC_RoutePending>
 
     <!-- Building Detail Section -->
     <SC_BuildingNeeds>Building Needs</SC_BuildingNeeds>
