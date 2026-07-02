@@ -39,6 +39,10 @@ namespace FactionColonies.SupplyChain
         // completedGeneration (release on write / acquire on read), same as FCRoadQueue's pendingNewEdges.
         private Dictionary<SupplyRoute, Result> pendingResults;
 
+        // Log messages the worker wants surfaced. The worker NEVER calls the logger itself (off-thread Log
+        // calls crash the dev log window / kill the thread); it buffers here and the main thread flushes.
+        private List<string> pendingLog;
+
         /// <summary>Discard any in-flight computation — call after a world change (roads/research) re-dirties routes.</summary>
         public void Invalidate()
         {
@@ -83,36 +87,55 @@ namespace FactionColonies.SupplyChain
 
         private void Compute(List<Job> jobs, int gen)
         {
+            // Silence the base mod's incidental logging (e.g. TravelUtil's verbose messages) on THIS thread,
+            // so nothing this worker calls touches Verse.Log off the main thread. Thread-static; restored below.
+            bool prevSuppress = LogUtil.SuppressOnThisThread;
+            LogUtil.SuppressOnThisThread = true;
             try
             {
                 Dictionary<SupplyRoute, Result> results = new Dictionary<SupplyRoute, Result>(jobs.Count);
-                for (int i = 0; i < jobs.Count; i++)
-                {
-                    // Bail if superseded by a newer generation or the game is being torn down.
-                    if (gen != currentGeneration || Current.Game is null) return;
+                List<string> log = null;
 
-                    Job job = jobs[i];
-                    try
+                try
+                {
+                    for (int i = 0; i < jobs.Count; i++)
                     {
-                        List<PlanetTile> path;
-                        int ticks = TravelUtil.ReturnTicksToArrive(job.from, job.to, out path);
-                        results[job.route] = new Result { travelTicks = ticks, path = path };
+                        // Bail if superseded by a newer generation or the game is being torn down (publish nothing).
+                        if (gen != currentGeneration || Current.Game is null) return;
+
+                        Job job = jobs[i];
+                        try
+                        {
+                            List<PlanetTile> path;
+                            int ticks = TravelUtil.ReturnTicksToArrive(job.from, job.to, out path);
+                            results[job.route] = new Result { travelTicks = ticks, path = path };
+                        }
+                        catch (Exception e)
+                        {
+                            // Leave this route dirty so it retries; buffer the message (no logger call here).
+                            if (log is null) log = new List<string>();
+                            log.Add($"SupplyRouteWarmer pathfind threw (route left dirty): {e}");
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        // Leave this route dirty so it retries next generation.
-                        LogSC.Error($"SupplyRouteWarmer pathfind threw (route left dirty): {e}");
-                    }
+                }
+                catch (Exception e)
+                {
+                    // Backstop: the worker must never die from an unhandled exception. Buffer and still
+                    // publish whatever was computed so warming isn't permanently stalled.
+                    if (log is null) log = new List<string>();
+                    log.Add($"SupplyRouteWarmer background computation failed: {e}");
                 }
 
                 if (gen == currentGeneration)
                 {
-                    pendingResults = results;      // non-volatile write...
+                    pendingResults = results;      // non-volatile writes...
+                    pendingLog = log;
                     completedGeneration = gen;     // ...published by this volatile write (release)
                 }
             }
             finally
             {
+                LogUtil.SuppressOnThisThread = prevSuppress;
                 workerActive = false;
             }
         }
@@ -121,11 +144,20 @@ namespace FactionColonies.SupplyChain
         {
             if (completedGeneration != currentGeneration) return;  // nothing fresh, or superseded
             Dictionary<SupplyRoute, Result> results = pendingResults;
+            List<string> log = pendingLog;
             if (results is null) return;
             pendingResults = null;
+            pendingLog = null;
 
             foreach (KeyValuePair<SupplyRoute, Result> kv in results)
                 kv.Key.ApplyPathResult(kv.Value.travelTicks, kv.Value.path);
+
+            // Flush any buffered worker messages here — on the main thread, where logging is safe.
+            if (log != null)
+            {
+                foreach (string msg in log)
+                    LogSC.Error(msg);
+            }
         }
     }
 }
