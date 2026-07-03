@@ -28,4 +28,20 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_2</defName>
+		<label>Supply Route Changes</label>
+		<description>A handful of changes to supply routes (only relevant for Complex mode).</description>
+		<releaseDate>2026-07-02</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>The player can now control how frequently routes are sent out</li>
+		<li>Routes now take time to reach their destination, based on the distance and path from the source</li>
+		<li>Adds an optional caravan-based route system. When enabled (default off), deliveries are represented by actual world objects that traverse the world map. This can be performance intensive (hence defaulting to off)</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
