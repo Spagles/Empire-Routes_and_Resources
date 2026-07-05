@@ -27,8 +27,6 @@ namespace FactionColonies.SupplyChain
     {
         private List<NeedState> needStates = new List<NeedState>();
         private bool hasAnyShortfall;
-        private bool hasCompletedFirstTax;
-        public bool HasCompletedFirstTax => hasCompletedFirstTax;
 
         private WorldSettlementFC cachedSettlement;
 
@@ -50,17 +48,6 @@ namespace FactionColonies.SupplyChain
         {
             needStates = states ?? new List<NeedState>();
             UpdateHasAnyShortfall();
-            statModsDirty = true;
-        }
-
-        /// <summary>
-        /// Marks that the settlement's first tax cycle has completed, ending the founding
-        /// grace period during which unmet-need penalties are waived. Called from the data
-        /// comp's PostTaxCleanup so the single orchestrator call site covers both subsystems.
-        /// </summary>
-        public void MarkFirstTaxComplete()
-        {
-            hasCompletedFirstTax = true;
             statModsDirty = true;
         }
 
@@ -179,7 +166,7 @@ namespace FactionColonies.SupplyChain
             if (stat.aggregation == FCStatAggregation.Additive)
             {
                 // 0. Suppress natural stat stabilization when any need is unmet
-                if (hasCompletedFirstTax && hasAnyShortfall)
+                if (hasAnyShortfall)
                 {
                     if (stat == FCStatDefOf.happinessGainedBase)
                         value -= FCSettings.happinessBaseGain;
@@ -189,19 +176,16 @@ namespace FactionColonies.SupplyChain
                         value -= FCSettings.unrestBaseLost;
                 }
 
-                // 1. Penalties for unmet needs (waived during founding grace period)
-                if (hasCompletedFirstTax)
+                // 1. Penalties for unmet needs
+                foreach (NeedState state in needStates)
                 {
-                    foreach (NeedState state in needStates)
+                    if (state.penalties is null || state.demanded <= 0 || state.fulfilled >= state.demanded)
+                        continue;
+                    double shortfall = state.demanded - state.fulfilled;
+                    foreach (NeedPenalty penalty in state.penalties)
                     {
-                        if (state.penalties is null || state.demanded <= 0 || state.fulfilled >= state.demanded)
-                            continue;
-                        double shortfall = state.demanded - state.fulfilled;
-                        foreach (NeedPenalty penalty in state.penalties)
-                        {
-                            if (penalty.stat == stat)
-                                value += penalty.penaltyPerUnit * shortfall;
-                        }
+                        if (penalty.stat == stat)
+                            value += penalty.penaltyPerUnit * shortfall;
                     }
                 }
 
@@ -244,7 +228,7 @@ namespace FactionColonies.SupplyChain
             string desc = null;
 
             // Stabilization suppression description
-            if (hasCompletedFirstTax && hasAnyShortfall &&
+            if (hasAnyShortfall &&
                 (stat == FCStatDefOf.happinessGainedBase ||
                  stat == FCStatDefOf.loyaltyGainedBase ||
                  stat == FCStatDefOf.unrestLostBase))
@@ -252,35 +236,32 @@ namespace FactionColonies.SupplyChain
                 desc = "SC_StabilizationSuppressed".Translate();
             }
 
-            // Penalty descriptions (waived during founding grace period)
-            if (hasCompletedFirstTax)
+            // Penalty descriptions
+            foreach (NeedState state in needStates)
             {
-                foreach (NeedState state in needStates)
+                if (state.penalties is null || state.demanded <= 0 || state.fulfilled >= state.demanded)
+                    continue;
+                double shortfall = state.demanded - state.fulfilled;
+                foreach (NeedPenalty penalty in state.penalties)
                 {
-                    if (state.penalties is null || state.demanded <= 0 || state.fulfilled >= state.demanded)
-                        continue;
-                    double shortfall = state.demanded - state.fulfilled;
-                    foreach (NeedPenalty penalty in state.penalties)
-                    {
-                        if (penalty.stat != stat) continue;
-                        double val = penalty.penaltyPerUnit * shortfall;
-                        if (val <= 0) continue;
-                        val = Math.Round(val, 2);
+                    if (penalty.stat != stat) continue;
+                    double val = penalty.penaltyPerUnit * shortfall;
+                    if (val <= 0) continue;
+                    val = Math.Round(val, 2);
 
-                        bool invert = stat.invertedForDisplay;
-                        /* Due to the weirdness of unrest, we actually want to invert the inversion for unrest values */
-                        /* Should *really* replace unrest with "stability" or something... */
-                        if (stat == FCStatDefOf.unrestGainedBase ||
-                            stat == FCStatDefOf.unrestGainedMultiplier ||
-                            stat == FCStatDefOf.unrestLostBase ||
-                            stat == FCStatDefOf.unrestLostMultiplier)
-                            invert = !invert;
+                    bool invert = stat.invertedForDisplay;
+                    /* Due to the weirdness of unrest, we actually want to invert the inversion for unrest values */
+                    /* Should *really* replace unrest with "stability" or something... */
+                    if (stat == FCStatDefOf.unrestGainedBase ||
+                        stat == FCStatDefOf.unrestGainedMultiplier ||
+                        stat == FCStatDefOf.unrestLostBase ||
+                        stat == FCStatDefOf.unrestLostMultiplier)
+                        invert = !invert;
 
-                        // .Resolve() flattens the TaggedString to a string while preserving the <color> tag;
-                        // the implicit string conversion would instead StripTags() and drop the color.
-                        string line = "SC_UnmetNeedPenalty".Translate(state.label, TextUtil.ColorizeAdditiveBonus(val, hardinvert: invert)).Resolve();
-                        desc = desc is null ? line : desc + "\n" + line;
-                    }
+                    // .Resolve() flattens the TaggedString to a string while preserving the <color> tag;
+                    // the implicit string conversion would instead StripTags() and drop the color.
+                    string line = "SC_UnmetNeedPenalty".Translate(state.label, TextUtil.ColorizeAdditiveBonus(val, hardinvert: invert)).Resolve();
+                    desc = desc is null ? line : desc + "\n" + line;
                 }
             }
 
@@ -334,8 +315,6 @@ namespace FactionColonies.SupplyChain
             if (needStates is null)
                 needStates = new List<NeedState>();
             UpdateHasAnyShortfall();
-
-            Scribe_Values.Look(ref hasCompletedFirstTax, "hasCompletedFirstTax", false);
         }
 
         // --- ISettlementPostLoadInit ---

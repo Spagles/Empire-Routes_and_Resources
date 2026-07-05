@@ -24,24 +24,6 @@ namespace FactionColonies.SupplyChain
             DestructiveTestUtil.AssertEmpireInvariants(f, "FullTaxCycle");
         }
 
-        [EmpireDestructiveTest("SC.Destructive.Tax")]
-        public static void PostTaxCleanup_PerSettlement_DoesNotThrow()
-        {
-            FactionFC f = DestructiveTestUtil.RequireFaction();
-            WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
-            if (comp is null) TestAssert.Skip("No SupplyChain world component");
-            if (f.settlements.Count == 0) TestAssert.Skip("No settlements");
-
-            foreach (WorldSettlementFC s in f.settlements)
-            {
-                WorldObjectComp_SupplyChain sc = SupplyChainCache.GetSettlementComp(s);
-                if (sc is null) continue;
-                TestAssert.DoesNotThrow(() => sc.PostTaxCleanup(),
-                    "PostTaxCleanup threw for " + s.Name);
-            }
-            DestructiveTestUtil.AssertEmpireInvariants(f, "PostTaxCleanup");
-        }
-
         private static void AssertStockpilesNonNegative(FactionFC f, WorldComponent_SupplyChain comp, string ctx)
         {
             if (comp.Mode == SupplyChainMode.Simple)

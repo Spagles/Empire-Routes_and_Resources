@@ -18,6 +18,7 @@ namespace FactionColonies.SupplyChain
         public static int baseCapPerSettlement = 50;
         public static float routeDecayPerDay = 0.1f;
         public static int localCapBase = 50;
+        public static int startingResourceAmount = 3;
         public static bool animateRouteArrows = false;
         public static bool useDeliveryCaravans = false;
         public static bool useThreadedRouteComputation = true;
@@ -35,6 +36,7 @@ namespace FactionColonies.SupplyChain
         private static string capBuffer = null;
         private static string routeDecayBuffer = null;
         private static string localCapBuffer = null;
+        private static string startingResourceBuffer = null;
         private static string thresholdBuffer = null;
         private static string distNormBuffer = null;
         private static string surchargeBuffer = null;
@@ -51,6 +53,7 @@ namespace FactionColonies.SupplyChain
             Scribe_Values.Look(ref baseCapPerSettlement, "baseCapPerSettlement", 50);
             Scribe_Values.Look(ref routeDecayPerDay, "routeDecayPerDay", 0.1f);
             Scribe_Values.Look(ref localCapBase, "localCapBase", 50);
+            Scribe_Values.Look(ref startingResourceAmount, "startingResourceAmount", 3);
             Scribe_Values.Look(ref animateRouteArrows, "animateRouteArrows", false);
             Scribe_Values.Look(ref useDeliveryCaravans, "useDeliveryCaravans", false);
             Scribe_Values.Look(ref useThreadedRouteComputation, "useThreadedRouteComputation", true);
@@ -132,6 +135,12 @@ namespace FactionColonies.SupplyChain
             if (localCapBuffer == null)
                 localCapBuffer = localCapBase.ToString("F0");
             ls.TextFieldNumeric(ref localCapBase, ref localCapBuffer, 10f, 500f);
+            ls.Gap(12f);
+
+            ls.Label("SC_SettingsStartingResources".Translate(startingResourceAmount.ToString()));
+            if (startingResourceBuffer == null)
+                startingResourceBuffer = startingResourceAmount.ToString();
+            ls.TextFieldNumeric(ref startingResourceAmount, ref startingResourceBuffer, 0, 500);
             ls.Gap(12f);
 
             ls.Label("SC_SettingsDefaultRouteFreq".Translate(defaultRouteFrequencyDays.ToString()));

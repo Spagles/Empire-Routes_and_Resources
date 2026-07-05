@@ -813,11 +813,6 @@ namespace FactionColonies.SupplyChain
 
         public void PostTaxResolution(FactionFC faction)
         {
-            // Clean up tithe injection state after tax resolution
-            foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                GetComp(settlement)?.PostTaxCleanup();
-            }
         }
 
         public void PreSettlementCreateTax(WorldSettlementFC settlement)
@@ -867,11 +862,7 @@ namespace FactionColonies.SupplyChain
 
             // 2. Per-building dormancy (all-or-nothing; deterministic settlement + slot order).
             foreach (WorldSettlementFC settlement in faction.settlements)
-            {
-                WorldObjectComp_SettlementNeeds needComp = SupplyChainCache.GetNeedsComp(settlement);
-                bool inGrace = needComp != null && !needComp.HasCompletedFirstTax;
-                NeedResolver.ResolveBuildingDormancy(settlement, stockpile, inGrace);
-            }
+                NeedResolver.ResolveBuildingDormancy(settlement, stockpile);
 
             // 3. Tithe injection (per-day draw).
             foreach (WorldSettlementFC settlement in faction.settlements)
@@ -904,14 +895,13 @@ namespace FactionColonies.SupplyChain
                 if (local is null) continue;
 
                 WorldObjectComp_SettlementNeeds needComp = SupplyChainCache.GetNeedsComp(settlement);
-                bool inGrace = needComp != null && !needComp.HasCompletedFirstTax;
 
                 // 1. Settlement + comp needs (proportional draw from the local stockpile).
                 if (needComp != null)
                     NeedResolver.ResolveSettlementNeeds(settlement, local, needComp);
 
                 // 2. Per-building dormancy (all-or-nothing; deterministic slot order).
-                NeedResolver.ResolveBuildingDormancy(settlement, local, inGrace);
+                NeedResolver.ResolveBuildingDormancy(settlement, local);
 
                 // 3. Tithe injection (per-day draw).
                 dataComp.ResolveTitheInjections(local);
@@ -1210,6 +1200,22 @@ namespace FactionColonies.SupplyChain
             resourceColumnsDirty = true;
 
             SupplyChainCache.GetNeedsComp(settlement)?.RebuildNeedStates();
+
+            // Seed the new settlement with a small starting buffer of basic resources so it isn't
+            // immediately in penalty on its first day (replaces the old first-tax grace period).
+            int startAmt = SupplyChainSettings.startingResourceAmount;
+            if (startAmt > 0)
+            {
+                IStockpile startSp = mode == SupplyChainMode.Simple
+                    ? Stockpile
+                    : GetComp(settlement)?.EnsureLocalStockpile();
+                if (startSp != null)
+                {
+                    startSp.Credit(ResourceTypeDefOf.RTD_Food, startAmt);
+                    startSp.Credit(ResourceTypeDefOf.RTD_Logging, startAmt);
+                    startSp.Credit(ResourceTypeDefOf.RTD_Mining, startAmt);
+                }
+            }
 
             if (!thresholdLetterSent)
             {

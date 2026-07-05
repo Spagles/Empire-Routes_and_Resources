@@ -383,16 +383,6 @@ namespace FactionColonies.SupplyChain
             }
         }
 
-        /// <summary>
-        /// Called after tax resolution completes. Ends the founding grace period on the
-        /// settlement-needs comp (which owns hasCompletedFirstTax), so the single orchestrator
-        /// call site covers both subsystems. (lastTitheDrawn persists as the most-recent daily draw.)
-        /// </summary>
-        public void PostTaxCleanup()
-        {
-            SupplyChainCache.GetNeedsComp(WorldSettlement)?.MarkFirstTaxComplete();
-        }
-
         // --- Allocation Management ---
 
         public double GetAllocation(ResourceTypeDef def)

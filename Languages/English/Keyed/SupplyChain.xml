@@ -14,6 +14,7 @@
     <SC_SettingsBaseCap>Base stockpile cap per settlement per resource: {0}</SC_SettingsBaseCap>
     <SC_SettingsRouteDecay>Route efficiency decay per travel day: {0}\nFormula: efficiency = 1 / (1 + days × decay)\nExample: 5-day route → 1 / (1 + 5 × {0}) = {1}%</SC_SettingsRouteDecay>
     <SC_SettingsLocalCap>Local stockpile cap per resource (Complex mode): {0}</SC_SettingsLocalCap>
+    <SC_SettingsStartingResources>Starting resources per new settlement (food, logging, mining): {0}</SC_SettingsStartingResources>
     <SC_SettingsDefaultRouteFreq>Default delivery frequency for new routes (days): {0}</SC_SettingsDefaultRouteFreq>
 
     <!-- Building Filters -->
@@ -179,10 +180,7 @@
     <SC_TaxEfficiencyDesc>Needs satisfaction ({0}%): x{1}% tax efficiency</SC_TaxEfficiencyDesc>
     <SC_SellRateNetworkDesc>Trade network: x{0}% sell rate</SC_SellRateNetworkDesc>
 
-    <!-- Grace Period -->
-    <SC_FoundingGrace>Founding grace period: penalties waived until first tax</SC_FoundingGrace>
     <SC_ProjectedPenalties>Projected penalties:</SC_ProjectedPenalties>
-    <SC_ProjectedPenaltiesWaived>Projected penalties (currently waived):</SC_ProjectedPenaltiesWaived>
     <SC_MaxWorkersSuffix>(max)</SC_MaxWorkersSuffix>
 
     <!-- Founding Cost -->

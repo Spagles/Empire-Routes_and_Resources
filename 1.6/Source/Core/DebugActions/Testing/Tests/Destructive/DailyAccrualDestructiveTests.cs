@@ -64,7 +64,7 @@ namespace FactionColonies.SupplyChain
                 if (sp is null) continue;
                 WorldSettlementFC captured = s;
                 TestAssert.DoesNotThrow(
-                    () => NeedResolver.ResolveBuildingDormancy(captured, sp, inGrace: false),
+                    () => NeedResolver.ResolveBuildingDormancy(captured, sp),
                     "ResolveBuildingDormancy threw for " + s.Name);
             }
             DestructiveTestUtil.AssertEmpireInvariants(f, "ResolveBuildingDormancy");
@@ -77,11 +77,9 @@ namespace FactionColonies.SupplyChain
             WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
             if (comp is null) TestAssert.Skip("No SupplyChain world component");
 
-            // Find a settlement with an input-requiring building that is past founding grace.
+            // Find a settlement with an input-requiring building.
             foreach (WorldSettlementFC s in f.settlements)
             {
-                WorldObjectComp_SettlementNeeds needComp = SupplyChainCache.GetNeedsComp(s);
-                if (needComp is null || !needComp.HasCompletedFirstTax) continue;
                 if (s.BuildingsComp is null) continue;
 
                 List<BuildingFC> buildings = s.BuildingsComp.Buildings;
@@ -103,14 +101,14 @@ namespace FactionColonies.SupplyChain
                         sp.TryDraw(input.resource, sp.GetAmount(input.resource), out _);
                     }
 
-                    NeedResolver.ResolveBuildingDormancy(s, sp, inGrace: false);
+                    NeedResolver.ResolveBuildingDormancy(s, sp);
                     TestAssert.IsFalse(buildings[slot].active,
-                        "A starved input building (" + b.def.defName + ") should be dormant past founding grace");
+                        "A starved input building (" + b.def.defName + ") should be dormant");
                     DestructiveTestUtil.AssertEmpireInvariants(f, "BuildingDormancy_Starved");
                     return;
                 }
             }
-            TestAssert.Skip("No post-grace input-requiring building available to starve");
+            TestAssert.Skip("No input-requiring building available to starve");
         }
 
         private static void AssertStockpilesNonNegative(FactionFC f, WorldComponent_SupplyChain comp, string ctx)

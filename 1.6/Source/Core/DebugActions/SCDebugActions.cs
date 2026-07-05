@@ -142,19 +142,6 @@ namespace FactionColonies.SupplyChain
             Log.Message("[Empire-SupplyChain] Debug: PreTaxResolution executed (includes sell orders).");
         }
 
-        [DebugAction("Empire Refactored: Routes & Resources", "Force post-tax cleanup", allowedGameStates = AllowedGameStates.Playing)]
-        private static void ForcePostTaxCleanup()
-        {
-            WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
-            if (comp == null) return;
-
-            FactionFC faction = FindFC.FactionComp;
-            if (faction == null) return;
-
-            comp.PostTaxResolution(faction);
-            Log.Message("[Empire-SupplyChain] Debug: PostTaxResolution executed (tithe injection cleanup).");
-        }
-
         [DebugAction("Empire Refactored: Routes & Resources", "Print stockpile state", allowedGameStates = AllowedGameStates.Playing)]
         private static void PrintStockpileState()
         {

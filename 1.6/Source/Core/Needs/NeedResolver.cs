@@ -235,10 +235,9 @@ namespace FactionColonies.SupplyChain
         /// given (post-deposit) stockpile. All-or-nothing per building instance: if the stockpile
         /// holds ALL of a building's inputs in full, draw them and mark the building active;
         /// otherwise draw nothing (inputs stay for others) and mark it dormant. Deterministic
-        /// slot order. During founding grace (<paramref name="inGrace"/>) buildings are never
-        /// toggled dormant — they stay active and only consume inputs that are fully available.
+        /// slot order.
         /// </summary>
-        public static void ResolveBuildingDormancy(WorldSettlementFC settlement, IStockpile stockpile, bool inGrace)
+        public static void ResolveBuildingDormancy(WorldSettlementFC settlement, IStockpile stockpile)
         {
             if (settlement?.BuildingsComp == null || stockpile == null) return;
 
@@ -281,8 +280,7 @@ namespace FactionColonies.SupplyChain
                     }
                 }
 
-                // Never toggle dormant during founding grace.
-                bComp.SetBuildingActive(slot, inGrace || canAfford);
+                bComp.SetBuildingActive(slot, canAfford);
             }
         }
 

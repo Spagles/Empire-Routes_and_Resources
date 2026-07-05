@@ -76,7 +76,6 @@ namespace FactionColonies.SupplyChain
         // Data proxies so the view body reads the ledger/needs comps transparently.
         private static readonly List<NeedState> EmptyNeedStates = new List<NeedState>();
         private List<NeedState> needStates => Needs?.NeedStates ?? EmptyNeedStates;
-        private bool hasCompletedFirstTax => Needs?.HasCompletedFirstTax ?? false;
         private IStockpile localStockpileDict => Ledger?.GetStockpile();
         private List<SellOrder> localSellOrders => Ledger?.LocalSellOrders;
         private Dictionary<ResourceTypeDef, double> titheInjections => Ledger?.TitheInjections;
@@ -197,8 +196,6 @@ namespace FactionColonies.SupplyChain
         private const float StatusCellPad = 8f;
         private const float StatusBarGap = 4f;
         private static readonly Color StatusNetStable = new Color(0.5f, 0.5f, 0.5f);
-        private static readonly Color GracePeriodText = new Color(0.5f, 0.85f, 1f);
-        private static readonly TaggedString CachedFoundingGrace = "SC_FoundingGrace".Translate();
 
         private float MeasureStockpileStatusBar(float width)
         {
@@ -1291,16 +1288,6 @@ namespace FactionColonies.SupplyChain
             Text.Font = GameFont.Small;
             curY += 34f;
 
-            if (!hasCompletedFirstTax)
-            {
-                Text.Anchor = TextAnchor.MiddleCenter;
-                GUI.color = GracePeriodText;
-                Widgets.Label(new Rect(AccentW + 6f, curY, viewRect.width - AccentW - 12f, 22f), CachedFoundingGrace);
-                GUI.color = Color.white;
-                Text.Anchor = TextAnchor.UpperLeft;
-                curY += 24f;
-            }
-
             int idx = 0;
             foreach (NeedState state in needStates)
             {
@@ -1449,10 +1436,7 @@ namespace FactionColonies.SupplyChain
                 tip += "\n\n" + (string)"SC_NeedProjectionExplain".Translate(
                     (projected * 100f).ToString("F0"));
                 double projectedShortfall = state.demanded * (1.0 - projected);
-                if (!hasCompletedFirstTax)
-                    tip += "\n\n" + (string)"SC_ProjectedPenaltiesWaived".Translate();
-                else
-                    tip += "\n\n" + (string)"SC_ProjectedPenalties".Translate();
+                tip += "\n\n" + (string)"SC_ProjectedPenalties".Translate();
                 foreach (NeedPenalty penalty in state.penalties)
                 {
                     double penaltyVal = penalty.penaltyPerUnit * projectedShortfall;
