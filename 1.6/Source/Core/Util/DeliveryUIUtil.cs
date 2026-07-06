@@ -141,5 +141,33 @@ namespace FactionColonies.SupplyChain
 
             TooltipHandler.TipRegion(rect, "SC_FrequencyTooltip".Translate());
         }
+
+        /// <summary>
+        /// Draws an editable numeric field for a route's base amount per period. Each route needs its
+        /// own persistent <paramref name="buffers"/> entry so intermediate typing (e.g. "1.") survives
+        /// across frames. <paramref name="onChanged"/> fires when the value actually changes.
+        /// </summary>
+        public static void DrawAmountField(Rect rect, SupplyRoute route,
+            Dictionary<SupplyRoute, string> buffers, Action onChanged)
+        {
+            string buffer;
+            if (!buffers.TryGetValue(route, out buffer))
+                buffer = route.amountPerPeriod.ToString("F1");
+
+            // amountPerPeriod is a double; edit through a float mirror (matches the add-route form) to
+            // avoid relying on a double TextFieldNumeric overload, then widen back on write.
+            float amount = (float)route.amountPerPeriod;
+            TextAnchor prev = Text.Anchor;
+            Text.Anchor = TextAnchor.MiddleCenter;
+            Widgets.TextFieldNumeric(rect, ref amount, ref buffer, 0f, 9999f);
+            Text.Anchor = prev;
+
+            buffers[route] = buffer;
+            if (!Mathf.Approximately(amount, (float)route.amountPerPeriod))
+            {
+                route.amountPerPeriod = amount;
+                onChanged?.Invoke();
+            }
+        }
     }
 }

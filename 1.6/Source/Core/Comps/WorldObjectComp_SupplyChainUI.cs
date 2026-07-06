@@ -58,6 +58,9 @@ namespace FactionColonies.SupplyChain
         private bool newRouteIsOutgoing = true;
         private ResourceTypeDef routeFilterResource;
 
+        // Persistent per-route text buffers for the in-row editable amount field.
+        private Dictionary<SupplyRoute, string> routeAmountBuffers = new Dictionary<SupplyRoute, string>();
+
         public WorldSettlementFC WorldSettlement
         {
             get
@@ -813,8 +816,8 @@ namespace FactionColonies.SupplyChain
                 Widgets.Label(new Rect(cx + 168f, curY, nameW, 26f), otherName);
 
                 Text.Anchor = TextAnchor.MiddleCenter;
-                // Base quantity
-                Widgets.Label(new Rect(pipeX, curY, 34f, 26f), route.amountPerPeriod.ToString("F1"));
+                // Base quantity (editable in place)
+                DeliveryUIUtil.DrawAmountField(new Rect(pipeX, curY, 34f, 26f), route, routeAmountBuffers, wc.DirtyFlowCache);
                 pipeX += 34f;
                 Widgets.Label(new Rect(pipeX, curY, 16f, 26f), "→");
                 pipeX += 16f;
@@ -856,6 +859,7 @@ namespace FactionColonies.SupplyChain
 
             if (routeToRemove != null)
             {
+                routeAmountBuffers.Remove(routeToRemove);
                 wc.UnlinkRoute(routeToRemove);
                 wc.DirtyFlowCache();
             }
