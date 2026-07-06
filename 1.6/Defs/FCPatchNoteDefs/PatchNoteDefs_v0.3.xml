@@ -44,4 +44,20 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_3</defName>
+		<label>Various Updates</label>
+		<description>Various tweaks and updates.</description>
+		<releaseDate>2026-07-05</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>Replace the &quot;grace period&quot; mechanic with granting all settlements a small amount of food, logging, and mining stockpile when founded</li>
+		<li>Update the mod settings for clearer seperation, and to let the player tune the on-founding stockpile amounts</li>
+		<li>Allow routes to be edited after creation</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
