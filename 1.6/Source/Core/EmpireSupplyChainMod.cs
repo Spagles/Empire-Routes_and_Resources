@@ -146,7 +146,7 @@ namespace FactionColonies.SupplyChain
 
             overflowPenaltyRate = ls.SliderTextField("SC_SettingsOverflowRate", "SC_SettingsOverflowRate".Translate(),
                 overflowPenaltyRate, 0.1f, 1.0f, decimals: 2,
-                tooltip: "SC_SettingsOverflowRateTip".Translate(FormulaUtil.OverflowSilver(1).ToString("F0")));
+                tooltip: "SC_SettingsOverflowRateTip".Translate(FormulaUtil.OverflowSilver(1).ToString("0.##")));
             ls.Gap(12f);
 
             ls.Label("SC_SettingsBaseCap".Translate(baseCapPerSettlement.ToString("F0")));

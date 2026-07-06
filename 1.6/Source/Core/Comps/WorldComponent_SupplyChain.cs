@@ -1592,7 +1592,7 @@ namespace FactionColonies.SupplyChain
             Widgets.Label(new Rect(0f, drawY, viewRect.width, 40f),
                 "SC_OverflowInfo".Translate(
                     SupplyChainSettings.overflowPenaltyRate.ToString("P0"),
-                    FormulaUtil.OverflowSilver(1).ToString("F0")));
+                    FormulaUtil.OverflowSilver(1).ToString("0.##")));
             GUI.color = Color.white;
             Text.Font = GameFont.Small;
 
