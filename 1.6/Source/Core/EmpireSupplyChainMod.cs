@@ -1,5 +1,7 @@
 using FactionColonies;
 using HarmonyLib;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using Verse;
@@ -18,7 +20,6 @@ namespace FactionColonies.SupplyChain
         public static int baseCapPerSettlement = 50;
         public static float routeDecayPerDay = 0.1f;
         public static int localCapBase = 50;
-        public static int startingResourceAmount = 3;
         public static bool animateRouteArrows = false;
         public static bool useDeliveryCaravans = false;
         public static bool useThreadedRouteComputation = true;
@@ -36,13 +37,28 @@ namespace FactionColonies.SupplyChain
         private static string capBuffer = null;
         private static string routeDecayBuffer = null;
         private static string localCapBuffer = null;
-        private static string startingResourceBuffer = null;
         private static string thresholdBuffer = null;
         private static string distNormBuffer = null;
         private static string surchargeBuffer = null;
         private static string resourceCostMultBuffer = null;
         private static string routeFreqBuffer = null;
-        private static Vector2 scrollPos;
+
+        // Per-resource starting stockpile amounts, keyed by ResourceTypeDef.defName. String keys
+        // (not LookMode.Def): ModSettings load before the DefDatabase is populated, so Def keys
+        // would fail to resolve. Resources absent from the map start at 0.
+        private static Dictionary<string, int> startingResources = DefaultStartingResources();
+
+        private static Dictionary<string, int> DefaultStartingResources() =>
+            new Dictionary<string, int> { { "RTD_Food", 5 }, { "RTD_Logging", 2 }, { "RTD_Mining", 2 } };
+
+        public static int GetStartingAmount(string defName) =>
+            startingResources.TryGetValue(defName, out int v) ? v : 0;
+
+        // Tabbed settings window state
+        private static int settingsTab = 0;
+        private static List<TabRecord> settingsTabs = new List<TabRecord>();
+        private static Vector2 scrollGeneral, scrollFounding, scrollComplex;
+        private static float heightGeneral, heightFounding, heightComplex;
 
         public override void ExposeData()
         {
@@ -53,7 +69,6 @@ namespace FactionColonies.SupplyChain
             Scribe_Values.Look(ref baseCapPerSettlement, "baseCapPerSettlement", 50);
             Scribe_Values.Look(ref routeDecayPerDay, "routeDecayPerDay", 0.1f);
             Scribe_Values.Look(ref localCapBase, "localCapBase", 50);
-            Scribe_Values.Look(ref startingResourceAmount, "startingResourceAmount", 3);
             Scribe_Values.Look(ref animateRouteArrows, "animateRouteArrows", false);
             Scribe_Values.Look(ref useDeliveryCaravans, "useDeliveryCaravans", false);
             Scribe_Values.Look(ref useThreadedRouteComputation, "useThreadedRouteComputation", true);
@@ -63,13 +78,41 @@ namespace FactionColonies.SupplyChain
             Scribe_Values.Look(ref baseSilverSurcharge, "baseSilverSurcharge", 500);
             Scribe_Values.Look(ref resourceCostMultiplier, "resourceCostMultiplier", 1.0f);
             Scribe_Values.Look(ref defaultRouteFrequencyDays, "defaultRouteFrequencyDays", 5);
+
+            Scribe_Collections.Look(ref startingResources, "startingResources", LookMode.Value, LookMode.Value);
+            // Re-seed defaults only when the node is entirely absent (a config predating this
+            // setting), so an explicit saved 0 is respected rather than reset to the default.
+            if (Scribe.mode == LoadSaveMode.LoadingVars && startingResources == null)
+                startingResources = DefaultStartingResources();
         }
 
         public void DoWindowContents(Rect inRect)
         {
+            settingsTabs.Clear();
+            settingsTabs.Add(new TabRecord("SC_SettingsTabGeneral".Translate(), delegate { settingsTab = 0; }, settingsTab == 0));
+            settingsTabs.Add(new TabRecord("SC_SettingsTabFounding".Translate(), delegate { settingsTab = 1; }, settingsTab == 1));
+            settingsTabs.Add(new TabRecord("SC_SettingsTabComplex".Translate(), delegate { settingsTab = 2; }, settingsTab == 2));
+
+            Rect contentRect = new Rect(inRect.x, inRect.y + 40f, inRect.width, inRect.height - 40f);
+            Widgets.DrawMenuSection(contentRect);
+            TabDrawer.DrawTabs(contentRect, settingsTabs);
+
+            Rect innerRect = contentRect.ContractedBy(5f);
+            switch (settingsTab)
+            {
+                case 0: DoGeneralTab(innerRect); break;
+                case 1: DoFoundingTab(innerRect); break;
+                case 2: DoComplexTab(innerRect); break;
+            }
+        }
+
+        /* General: mode toggle and settings that apply in both Simple and Complex mode. */
+        private void DoGeneralTab(Rect rect)
+        {
+            Rect viewRect = ScrollUtil.BeginScrollView(rect, ref scrollGeneral, heightGeneral);
+            Rect listRect = new Rect(viewRect.x, viewRect.y, viewRect.width, float.MaxValue);
             Listing_Standard ls = new Listing_Standard();
-            Rect viewRect = ScrollUtil.BeginScrollView(inRect, ref scrollPos, 750f);
-            ls.Begin(viewRect);
+            ls.Begin(listRect);
             Listing_StandardExtensions.ResetRowStripe();
 
             // Mode toggle
@@ -98,17 +141,6 @@ namespace FactionColonies.SupplyChain
             ls.CheckboxLabeled("SC_SettingsDebugLog".Translate(), ref printDebug);
             ls.Gap(12f);
 
-            ls.CheckboxLabeled("SC_SettingsAnimateArrows".Translate(), ref animateRouteArrows);
-            ls.Gap(12f);
-
-            ls.CheckboxLabeled("SC_SettingsUseDeliveryCaravans".Translate(), ref useDeliveryCaravans,
-                "SC_SettingsUseDeliveryCaravansTip".Translate());
-            ls.Gap(12f);
-
-            ls.CheckboxLabeled("SC_SettingsThreadedRoutes".Translate(), ref useThreadedRouteComputation,
-                "SC_SettingsThreadedRoutesTip".Translate());
-            ls.Gap(12f);
-
             ls.CheckboxLabeled("SC_SettingsUseMaxWorkers".Translate(), ref useMaxWorkersForNeeds);
             ls.Gap(12f);
 
@@ -123,36 +155,22 @@ namespace FactionColonies.SupplyChain
             ls.TextFieldNumeric(ref baseCapPerSettlement, ref capBuffer, 10f, 500f);
             ls.Gap(12f);
 
-            ls.Label("SC_SettingsRouteDecay".Translate(
-                routeDecayPerDay.ToString("F2"),
-                (FormulaUtil.RouteEfficiency(5.0) * 100).ToString("F0")));
-            if (routeDecayBuffer == null)
-                routeDecayBuffer = routeDecayPerDay.ToString("F2");
-            ls.TextFieldNumeric(ref routeDecayPerDay, ref routeDecayBuffer, 0.01f, 1f);
-            ls.Gap(12f);
+            if (ls.ButtonText("SC_OpenPatchNotes".Translate()))
+                Find.WindowStack.Add(new PatchNotesDisplayWindow("matathias.empire.supplychain", "SC_PatchTitle".Translate()));
 
-            ls.Label("SC_SettingsLocalCap".Translate(localCapBase.ToString("F0")));
-            if (localCapBuffer == null)
-                localCapBuffer = localCapBase.ToString("F0");
-            ls.TextFieldNumeric(ref localCapBase, ref localCapBuffer, 10f, 500f);
-            ls.Gap(12f);
+            heightGeneral = ls.CurHeight + 12f;
+            ls.End();
+            ScrollUtil.EndScrollView();
+        }
 
-            ls.Label("SC_SettingsStartingResources".Translate(startingResourceAmount.ToString()));
-            if (startingResourceBuffer == null)
-                startingResourceBuffer = startingResourceAmount.ToString();
-            ls.TextFieldNumeric(ref startingResourceAmount, ref startingResourceBuffer, 0, 500);
-            ls.Gap(12f);
-
-            ls.Label("SC_SettingsDefaultRouteFreq".Translate(defaultRouteFrequencyDays.ToString()));
-            if (routeFreqBuffer == null)
-                routeFreqBuffer = defaultRouteFrequencyDays.ToString();
-            ls.TextFieldNumeric(ref defaultRouteFrequencyDays, ref routeFreqBuffer, minRouteFrequencyDays, maxRouteFrequencyDays);
-            ls.Gap(12f);
-
-            // Founding cost settings
-            ls.GapLine(12f);
-            ls.Label("SC_SettingsFoundingHeader".Translate());
-            ls.Gap(6f);
+        /* Founding: settlement founding costs and per-resource starting stockpile amounts. */
+        private void DoFoundingTab(Rect rect)
+        {
+            Rect viewRect = ScrollUtil.BeginScrollView(rect, ref scrollFounding, heightFounding);
+            Rect listRect = new Rect(viewRect.x, viewRect.y, viewRect.width, float.MaxValue);
+            Listing_Standard ls = new Listing_Standard();
+            ls.Begin(listRect);
+            Listing_StandardExtensions.ResetRowStripe();
 
             ls.Label("SC_SettingsFoundingThreshold".Translate(freeSettlementThreshold.ToString()));
             if (thresholdBuffer == null)
@@ -176,11 +194,66 @@ namespace FactionColonies.SupplyChain
             if (resourceCostMultBuffer is null)
                 resourceCostMultBuffer = resourceCostMultiplier.ToString("F2");
             ls.TextFieldNumeric(ref resourceCostMultiplier, ref resourceCostMultBuffer, 0.1f, 10f);
-
             ls.Gap(12f);
-            if (ls.ButtonText("SC_OpenPatchNotes".Translate()))
-                Find.WindowStack.Add(new PatchNotesDisplayWindow("matathias.empire.supplychain", "SC_PatchTitle".Translate()));
 
+            // Per-resource starting stockpile amounts (one slider per stockpile-able resource).
+            ls.GapLine(12f);
+            ls.Label("SC_SettingsStartingResourcesHeader".Translate());
+            ls.Gap(6f);
+            foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs
+                         .Where(d => !d.isPoolResource).OrderBy(d => d.uiPriority))
+            {
+                int cur = GetStartingAmount(def.defName);
+                int nv = ls.SliderTextField("SC_StartRes_" + def.defName, def.LabelCap, cur, 0, 100);
+                if (nv != cur)
+                    startingResources[def.defName] = nv;
+            }
+
+            heightFounding = ls.CurHeight + 12f;
+            ls.End();
+            ScrollUtil.EndScrollView();
+        }
+
+        /* Complex Mode: settings that only take effect in Complex mode (routes, local caps). */
+        private void DoComplexTab(Rect rect)
+        {
+            Rect viewRect = ScrollUtil.BeginScrollView(rect, ref scrollComplex, heightComplex);
+            Rect listRect = new Rect(viewRect.x, viewRect.y, viewRect.width, float.MaxValue);
+            Listing_Standard ls = new Listing_Standard();
+            ls.Begin(listRect);
+            Listing_StandardExtensions.ResetRowStripe();
+
+            ls.CheckboxLabeled("SC_SettingsAnimateArrows".Translate(), ref animateRouteArrows);
+            ls.Gap(12f);
+
+            ls.CheckboxLabeled("SC_SettingsUseDeliveryCaravans".Translate(), ref useDeliveryCaravans,
+                "SC_SettingsUseDeliveryCaravansTip".Translate());
+            ls.Gap(12f);
+
+            ls.CheckboxLabeled("SC_SettingsThreadedRoutes".Translate(), ref useThreadedRouteComputation,
+                "SC_SettingsThreadedRoutesTip".Translate());
+            ls.Gap(12f);
+
+            ls.Label("SC_SettingsRouteDecay".Translate(
+                routeDecayPerDay.ToString("F2"),
+                (FormulaUtil.RouteEfficiency(5.0) * 100).ToString("F0")));
+            if (routeDecayBuffer == null)
+                routeDecayBuffer = routeDecayPerDay.ToString("F2");
+            ls.TextFieldNumeric(ref routeDecayPerDay, ref routeDecayBuffer, 0.01f, 1f);
+            ls.Gap(12f);
+
+            ls.Label("SC_SettingsLocalCap".Translate(localCapBase.ToString("F0")));
+            if (localCapBuffer == null)
+                localCapBuffer = localCapBase.ToString("F0");
+            ls.TextFieldNumeric(ref localCapBase, ref localCapBuffer, 10f, 500f);
+            ls.Gap(12f);
+
+            ls.Label("SC_SettingsDefaultRouteFreq".Translate(defaultRouteFrequencyDays.ToString()));
+            if (routeFreqBuffer == null)
+                routeFreqBuffer = defaultRouteFrequencyDays.ToString();
+            ls.TextFieldNumeric(ref defaultRouteFrequencyDays, ref routeFreqBuffer, minRouteFrequencyDays, maxRouteFrequencyDays);
+
+            heightComplex = ls.CurHeight + 12f;
             ls.End();
             ScrollUtil.EndScrollView();
         }

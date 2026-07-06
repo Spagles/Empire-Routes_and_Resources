@@ -152,11 +152,11 @@ What meeting, missing, or exceeding these needs actually does to a settlement is
         <label>Need Consequences</label>
         <description>Meeting a settlement's needs is paramount to its wellbeing.
 
-[b]Falling short.[/b] When a need goes unmet, the settlement suffers: happiness and loyalty fall, unrest rises, and prosperity erodes over time. The deeper and more sustained the shortfall, the heavier the toll. There is a grace period after a settlement's first tax before penalties begin to bite, so a brand-new settlement isn't punished before it can find its feet.
+[b]Falling short.[/b] When a need goes unmet, the settlement suffers: happiness and loyalty fall, unrest rises, and prosperity erodes over time. The deeper and more sustained the shortfall, the heavier the toll.
 
 [b]Going beyond.[/b] A sustained surplus, up to a point, is rewarded rather than wasted - comfortably oversupplied settlements gain in their social stats. Stockpiling beyond that point brings no further bonus.
 
-[b]The catch.[/b] Normally a settlement slowly heals on its own - happiness and loyalty drift up, unrest drifts down, day by day. But while any need is in shortfall (after the grace period), that natural recovery is suppressed: a struggling settlement will not passively climb out of its hole. Restore its supply and the natural recovery resumes. This is what makes neglected logistics spiral - the fix is to feed the settlement, not to wait it out.</description>
+[b]The catch.[/b] Normally a settlement slowly heals on its own - happiness and loyalty drift up, unrest drifts down, day by day. But while any need is in shortfall, that natural recovery is suppressed: a struggling settlement will not passively climb out of its hole. Restore its supply and the natural recovery resumes.</description>
         <category>CodexCat_SC_Needs</category>
         <displayOrder>20</displayOrder>
         <iconPath>GUI/Prosperity</iconPath>

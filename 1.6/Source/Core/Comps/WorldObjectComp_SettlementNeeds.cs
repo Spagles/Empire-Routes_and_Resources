@@ -223,17 +223,38 @@ namespace FactionColonies.SupplyChain
             return value;
         }
 
+        // A need penalty (and a suppressed base-drift) is always detrimental, so it renders
+        // red. Happiness/loyalty losses show as a negative number; unrest is inverted, so a
+        // rise in unrest shows as a positive number. `magnitude` is a positive quantity.
+        private static string ColorizePenalty(double magnitude, FCStatDef stat)
+        {
+            bool unrestStat = stat == FCStatDefOf.unrestGainedBase || stat == FCStatDefOf.unrestGainedMultiplier
+                           || stat == FCStatDefOf.unrestLostBase || stat == FCStatDefOf.unrestLostMultiplier;
+            return unrestStat
+                ? TextUtil.ColorizeAdditiveBonus(magnitude, invert: true)      // "+mag" red
+                : TextUtil.ColorizeAdditiveBonus(magnitude, hardinvert: true); // "-mag" red
+        }
+
         public string GetStatModifierDesc(FCStatDef stat)
         {
             string desc = null;
 
-            // Stabilization suppression description
-            if (hasAnyShortfall &&
-                (stat == FCStatDefOf.happinessGainedBase ||
-                 stat == FCStatDefOf.loyaltyGainedBase ||
-                 stat == FCStatDefOf.unrestLostBase))
+            // Stabilization suppression description. Shown as a real "<value> - <label>" line
+            // that visibly counteracts the natural daily drift ComputeStatModifier cancels.
+            // The suppression modifies the gain/loss-drift stat, but we describe it under the
+            // stat the unmet-need penalties land on so it groups with them in the tooltip.
+            // magnitude = the base drift that gets cancelled.
+            if (hasAnyShortfall)
             {
-                desc = "SC_StabilizationSuppressed".Translate();
+                double magnitude = 0;
+                if (stat == FCStatDefOf.happinessLostBase) magnitude = FCSettings.happinessBaseGain;
+                else if (stat == FCStatDefOf.loyaltyLostBase) magnitude = FCSettings.loyaltyBaseGain;
+                else if (stat == FCStatDefOf.unrestGainedBase) magnitude = FCSettings.unrestBaseLost;
+
+                // .Resolve() flattens to a string while keeping the colored value's <color> tag;
+                // raw "string + TaggedString" concatenation would StripTags() and drop the color.
+                if (magnitude != 0)
+                    desc = "SC_StabilizationSuppressed".Translate(ColorizePenalty(magnitude, stat)).Resolve();
             }
 
             // Penalty descriptions
@@ -249,18 +270,9 @@ namespace FactionColonies.SupplyChain
                     if (val <= 0) continue;
                     val = Math.Round(val, 2);
 
-                    bool invert = stat.invertedForDisplay;
-                    /* Due to the weirdness of unrest, we actually want to invert the inversion for unrest values */
-                    /* Should *really* replace unrest with "stability" or something... */
-                    if (stat == FCStatDefOf.unrestGainedBase ||
-                        stat == FCStatDefOf.unrestGainedMultiplier ||
-                        stat == FCStatDefOf.unrestLostBase ||
-                        stat == FCStatDefOf.unrestLostMultiplier)
-                        invert = !invert;
-
                     // .Resolve() flattens the TaggedString to a string while preserving the <color> tag;
                     // the implicit string conversion would instead StripTags() and drop the color.
-                    string line = "SC_UnmetNeedPenalty".Translate(state.label, TextUtil.ColorizeAdditiveBonus(val, hardinvert: invert)).Resolve();
+                    string line = "SC_UnmetNeedPenalty".Translate(state.label, ColorizePenalty(val, stat)).Resolve();
                     desc = desc is null ? line : desc + "\n" + line;
                 }
             }

@@ -1201,20 +1201,19 @@ namespace FactionColonies.SupplyChain
 
             SupplyChainCache.GetNeedsComp(settlement)?.RebuildNeedStates();
 
-            // Seed the new settlement with a small starting buffer of basic resources so it isn't
-            // immediately in penalty on its first day (replaces the old first-tax grace period).
-            int startAmt = SupplyChainSettings.startingResourceAmount;
-            if (startAmt > 0)
+            // Seed the new settlement with the configured per-resource starting buffer so it isn't
+            // immediately in penalty on its first day.
+            // Stockpile resolved lazily so an all-zero configuration touches nothing.
+            IStockpile startSp = null;
+            foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs)
             {
-                IStockpile startSp = mode == SupplyChainMode.Simple
-                    ? Stockpile
-                    : GetComp(settlement)?.EnsureLocalStockpile();
-                if (startSp != null)
-                {
-                    startSp.Credit(ResourceTypeDefOf.RTD_Food, startAmt);
-                    startSp.Credit(ResourceTypeDefOf.RTD_Logging, startAmt);
-                    startSp.Credit(ResourceTypeDefOf.RTD_Mining, startAmt);
-                }
+                if (def.isPoolResource) continue;
+                int amt = SupplyChainSettings.GetStartingAmount(def.defName);
+                if (amt <= 0) continue;
+                if (startSp == null)
+                    startSp = mode == SupplyChainMode.Simple ? Stockpile : GetComp(settlement)?.EnsureLocalStockpile();
+                if (startSp == null) break;
+                startSp.Credit(def, amt);
             }
 
             if (!thresholdLetterSent)

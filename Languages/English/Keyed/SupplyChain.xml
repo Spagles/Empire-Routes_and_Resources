@@ -14,7 +14,10 @@
     <SC_SettingsBaseCap>Base stockpile cap per settlement per resource: {0}</SC_SettingsBaseCap>
     <SC_SettingsRouteDecay>Route efficiency decay per travel day: {0}\nFormula: efficiency = 1 / (1 + days × decay)\nExample: 5-day route → 1 / (1 + 5 × {0}) = {1}%</SC_SettingsRouteDecay>
     <SC_SettingsLocalCap>Local stockpile cap per resource (Complex mode): {0}</SC_SettingsLocalCap>
-    <SC_SettingsStartingResources>Starting resources per new settlement (food, logging, mining): {0}</SC_SettingsStartingResources>
+    <SC_SettingsTabGeneral>General</SC_SettingsTabGeneral>
+    <SC_SettingsTabFounding>Founding</SC_SettingsTabFounding>
+    <SC_SettingsTabComplex>Complex Mode</SC_SettingsTabComplex>
+    <SC_SettingsStartingResourcesHeader>Starting resources per new settlement (0 = none)</SC_SettingsStartingResourcesHeader>
     <SC_SettingsDefaultRouteFreq>Default delivery frequency for new routes (days): {0}</SC_SettingsDefaultRouteFreq>
 
     <!-- Building Filters -->
@@ -167,7 +170,7 @@
     <SC_Stat_TaxEfficiency>Supply chain satisfaction improves tax collection efficiency at this settlement.</SC_Stat_TaxEfficiency>
 
     <!-- Stabilization Suppression -->
-    <SC_StabilizationSuppressed>Needs unsatisfied — natural stabilization suspended</SC_StabilizationSuppressed>
+    <SC_StabilizationSuppressed>{0} - Unmet needs</SC_StabilizationSuppressed>
 
     <!-- Surplus Bonuses -->
     <SC_SurplusBonus>{0} surplus: +{1}</SC_SurplusBonus>
