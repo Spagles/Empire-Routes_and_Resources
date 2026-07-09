@@ -165,9 +165,9 @@
     <SC_BuildingNeedCardCap>Cap: {0}</SC_BuildingNeedCardCap>
 
     <!-- Stat Descriptions -->
-    <SC_Stat_SellRateMultiplier>Improves the silver earned when selling surplus resources from the stockpile.</SC_Stat_SellRateMultiplier>
-    <SC_Stat_RouteEfficiencyBonus>Reduces resource losses on supply routes originating from this settlement.</SC_Stat_RouteEfficiencyBonus>
-    <SC_Stat_TaxEfficiency>Supply chain satisfaction improves tax collection efficiency at this settlement.</SC_Stat_TaxEfficiency>
+    <SC_Stat_SellRateMultiplier>{0} Sell Rate</SC_Stat_SellRateMultiplier>
+    <SC_Stat_RouteEfficiencyBonus>{0} Route Efficiency</SC_Stat_RouteEfficiencyBonus>
+    <SC_Stat_TaxEfficiency>{0} Tax Efficiency</SC_Stat_TaxEfficiency>
 
     <!-- Stabilization Suppression -->
     <SC_StabilizationSuppressed>{0} - Unmet needs</SC_StabilizationSuppressed>
