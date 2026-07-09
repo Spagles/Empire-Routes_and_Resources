@@ -60,4 +60,19 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_4</defName>
+		<label>Minor Updates</label>
+		<description>A couple of minor backend &amp; frontend updates.</description>
+		<releaseDate>2026-07-09</releaseDate>
+		<patchNoteType>Patch</patchNoteType>
+		<patchNoteLines>
+		<li>Rewrite the stat modifier description for sell rate multiplier, route efficiency bonus, and tax efficiency so that they read the same as every other stat modifier in the UI</li>
+		<li>Update the Overflow Silver tooltips to handul fractional amounts</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
