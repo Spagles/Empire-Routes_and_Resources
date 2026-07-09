@@ -9,15 +9,17 @@ namespace FactionColonies.SupplyChain
     public static class AllocationDestructiveTests
     {
         [EmpireDestructiveTest("SC.Destructive.Allocation")]
-        public static void SetAllocation_FarAboveProduction_Rejected()
+        public static void SetAllocation_FarAboveProduction_AcceptedAndClamped()
         {
             FactionFC f = DestructiveTestUtil.RequireFaction();
             WorldObjectComp_SupplyChain comp = GetComp(f, out ResourceTypeDef r);
             if (comp is null || r is null) TestAssert.Skip("No settlement comp / resource available");
 
-            // No settlement produces a billion units, so this must be rejected.
+            // Over-production allocations are accepted; the excess is clamped at daily realization,
+            // so a billion-unit request must not be rejected and must not drive income negative.
+            // SetAllocation still returns false only when the settlement does not track the resource.
             bool accepted = comp.SetAllocation(r, 1e9);
-            TestAssert.IsFalse(accepted, "An allocation far above production should be rejected");
+            if (!accepted) TestAssert.Skip("Settlement does not track resource " + r.defName);
 
             DestructiveTestUtil.AssertEmpireInvariants(f, "SetAllocation_FarAboveProduction");
         }

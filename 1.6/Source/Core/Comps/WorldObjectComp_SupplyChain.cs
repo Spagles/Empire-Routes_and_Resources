@@ -442,12 +442,9 @@ namespace FactionColonies.SupplyChain
                 return;
             }
 
-            bool ok = resource.SetStockpileAllocation(key, live, (req, act) => Realize(def, req, act));
-            if (ok)
-            {
-                allocations[def] = live;
-                SupplyChainCache.Comp?.DirtyFlowCache();
-            }
+            resource.SetStockpileAllocation(key, live, (req, act) => Realize(def, req, act));
+            allocations[def] = live;
+            SupplyChainCache.Comp?.DirtyFlowCache();
         }
 
         /// <summary>
@@ -503,13 +500,10 @@ namespace FactionColonies.SupplyChain
                 return true;
             }
 
-            bool ok = resource.SetStockpileAllocation(key, amount, (req, act) => Realize(def, req, act));
-            if (ok)
-            {
-                allocations[def] = amount;
-                SupplyChainCache.Comp?.DirtyFlowCache();
-            }
-            return ok;
+            resource.SetStockpileAllocation(key, amount, (req, act) => Realize(def, req, act));
+            allocations[def] = amount;
+            SupplyChainCache.Comp?.DirtyFlowCache();
+            return true;
         }
 
         /// <summary>
@@ -611,14 +605,7 @@ namespace FactionColonies.SupplyChain
 
                 string key = ALLOC_KEY_PREFIX + kv.Key.defName;
                 ResourceTypeDef capturedDef = kv.Key;
-                bool ok = resource.SetStockpileAllocation(key, clamped, (req, act) => Realize(capturedDef, req, act));
-                if (!ok)
-                {
-                    if (toRemove is null) toRemove = new List<ResourceTypeDef>();
-                    toRemove.Add(kv.Key);
-                    LogSC.Error($"Unexpected: could not re-register clamped allocation for {kv.Key.label} at {ws.Name} (clamped={clamped:F1}, available={available:F1}). Clearing.");
-                    continue;
-                }
+                resource.SetStockpileAllocation(key, clamped, (req, act) => Realize(capturedDef, req, act));
 
                 if (clamped < kv.Value)
                 {
