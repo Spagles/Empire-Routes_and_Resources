@@ -131,6 +131,13 @@ namespace FactionColonies.SupplyChain
                 SwitchMode(SupplyChainSettings.mode);
             }
 
+            // Eagerly init local stockpile wrappers / faction caps on load. FinalizeInit set
+            // capsAndStockpilesDirty above but nothing consumes it until the first daily pass, which
+            // runs ProcessArrivals/DispatchDueRoutes before it ensures wrappers — so arriving deliveries
+            // would be credited to a null wrapper and lost. Doing it here guarantees GetStockpile() is
+            // live for every consumer immediately after load.
+            EnsureCapsAndStockpiles();
+
             // Rebuild the transient trade-network partner sets from the loaded routes (Complex mode).
             // The serialized connectedPartners/hubScore keep bonuses valid until this runs; the
             // recompute is a no-op on the stat cache when it matches (SetNetworkInfo early-out).
