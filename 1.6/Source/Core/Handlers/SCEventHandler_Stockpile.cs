@@ -9,6 +9,9 @@ namespace FactionColonies.SupplyChain
     /// All fields are XML-configurable via DefModExtension on FCEventDef.
     /// <para><c>mult</c>: multiplier on current stock. &lt;1 = loss, &gt;1 = gain, 1 = no effect.</para>
     /// <para><c>baseAmount</c>/<c>perWorkerAmount</c>: flat credit/draw. Positive = gain, negative = loss.</para>
+    /// <para><c>convertToSilver</c>: when true, gains (mult or flat) are paid out as silver at the
+    /// overflow rate instead of stored, and mult-phase losses are salvaged to silver; the settlement
+    /// receives the total as one-time silver income. Flat losses remain a plain draw.</para>
     /// <para>All three fields are applied independently and can be combined.</para>
     /// </summary>
     public class SCEventHandler_Stockpile : FCEventHandlerExtension
@@ -52,19 +55,27 @@ namespace FactionColonies.SupplyChain
                                 stockpile.TryDraw(r, loss, out drawn);
                                 if (convertToSilver && drawn > 0)
                                     silverAccum += FormulaUtil.OverflowSilver(drawn);
-                                if (debug)
-                                    LogSC.Message("[Empire-SupplyChain] Stockpile event: "
-                                        + settlement.Name + " " + r.label
-                                        + " mult=" + mult + " drew " + drawn.ToString("F1"));
+                                LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                    + settlement.Name + " " + r.label
+                                    + " mult=" + mult + " drew " + drawn.ToString("F1"));
                             }
                             else if (target > current)
                             {
                                 double gain = target - current;
-                                stockpile.Credit(r, gain);
-                                if (debug)
+                                if (convertToSilver)
+                                {
+                                    silverAccum += FormulaUtil.OverflowSilver(gain);
+                                    LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                        + settlement.Name + " " + r.label
+                                        + " mult=" + mult + " sold " + gain.ToString("F1") + " for silver");
+                                }
+                                else
+                                {
+                                    stockpile.Credit(r, gain);
                                     LogSC.Message("[Empire-SupplyChain] Stockpile event: "
                                         + settlement.Name + " " + r.label
                                         + " mult=" + mult + " credited " + gain.ToString("F1"));
+                                }
                             }
                         }
                     }
@@ -75,11 +86,20 @@ namespace FactionColonies.SupplyChain
                     {
                         if (delta > 0)
                         {
-                            stockpile.Credit(r, delta);
-                            if (debug)
+                            if (convertToSilver)
+                            {
+                                silverAccum += FormulaUtil.OverflowSilver(delta);
+                                LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                    + settlement.Name + " " + r.label
+                                    + " sold " + delta.ToString("F1") + " for silver (flat)");
+                            }
+                            else
+                            {
+                                stockpile.Credit(r, delta);
                                 LogSC.Message("[Empire-SupplyChain] Stockpile event: "
                                     + settlement.Name + " " + r.label
                                     + " credited " + delta.ToString("F1") + " (flat)");
+                            }
                         }
                         else
                         {
