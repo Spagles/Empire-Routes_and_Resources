@@ -1208,6 +1208,11 @@ namespace FactionColonies.SupplyChain
 
             SupplyChainCache.GetNeedsComp(settlement)?.RebuildNeedStates();
 
+            // Caps scale with settlement count (Simple) / building set (Complex); the new settlement is
+            // already in faction.settlements at this point, so recompute before seeding — otherwise the
+            // starting buffer is clamped against stale caps and the first settlement's buffer is dropped.
+            EnsureCapsAndStockpiles();
+
             // Seed the new settlement with the configured per-resource starting buffer so it isn't
             // immediately in penalty on its first day.
             // Stockpile resolved lazily so an all-zero configuration touches nothing.
