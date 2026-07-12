@@ -664,7 +664,13 @@ namespace FactionColonies.SupplyChain
                 {
                     double amount = kv.Value * share;
                     if (amount > 0)
-                        comp.GetStockpile().Credit(kv.Key, amount);
+                    {
+                        // A settlement can receive more of a resource than its local cap holds; sell the
+                        // over-cap remainder as silver instead of dropping it (matches Realize's daily overflow).
+                        double excess = comp.GetStockpile().Credit(kv.Key, amount);
+                        if (excess > 0 && !kv.Key.isPoolResource)
+                            settlement.AddOneTimeSilverIncome(FormulaUtil.OverflowSilver(excess));
+                    }
                 }
             }
 
