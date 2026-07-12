@@ -30,6 +30,12 @@ namespace FactionColonies.SupplyChain
             bool debug = SupplyChainSettings.PrintDebug;
             List<ResourceTypeDef> targets = GetTargetResources();
 
+            // The mult phase scales a proportion of the current pile, so it must run once per
+            // physical pile. In Simple mode every affected settlement shares wc.Stockpile — applying
+            // the mult per settlement would compound it to mult^N. Track distinct piles and apply the
+            // mult only the first time we see each. Flat gains/draws stay per settlement.
+            HashSet<IStockpile> multAppliedPiles = new HashSet<IStockpile>();
+
             foreach (WorldSettlementFC settlement in evt.settlementTraitLocations)
             {
                 if (settlement == null) continue;
@@ -37,12 +43,14 @@ namespace FactionColonies.SupplyChain
                 IStockpile stockpile = GetStockpile(wc, settlement);
                 if (stockpile == null) continue;
 
+                bool applyMult = multAppliedPiles.Add(stockpile);
+
                 float silverAccum = 0f;
 
                 foreach (ResourceTypeDef r in targets)
                 {
                     // Mult phase
-                    if (Math.Abs(mult - 1f) > 0.001f)
+                    if (applyMult && Math.Abs(mult - 1f) > 0.001f)
                     {
                         double current = stockpile.GetAmount(r);
                         if (current > 0.01)
