@@ -75,7 +75,7 @@ namespace FactionColonies.SupplyChain
             Scribe_Values.Look(ref useMaxWorkersForNeeds, "useMaxWorkersForNeeds", false);
             Scribe_Values.Look(ref freeSettlementThreshold, "freeSettlementThreshold", 3);
             Scribe_Values.Look(ref distanceNormalizingDays, "distanceNormalizingDays", DEFAULT_DISTANCE_NORMALIZING_DAYS);
-            Scribe_Values.Look(ref baseSilverSurcharge, "baseSilverSurcharge", 500);
+            Scribe_Values.Look(ref baseSilverSurcharge, "baseSilverSurcharge", (int)FCSettings.silverToCreateSettlement);
             Scribe_Values.Look(ref resourceCostMultiplier, "resourceCostMultiplier", 1.0f);
             Scribe_Values.Look(ref defaultRouteFrequencyDays, "defaultRouteFrequencyDays", 5);
 
