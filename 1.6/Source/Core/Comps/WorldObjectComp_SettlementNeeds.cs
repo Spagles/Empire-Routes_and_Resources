@@ -112,8 +112,12 @@ namespace FactionColonies.SupplyChain
                 {
                     if (entry.resource is null || entry.amount <= 0) continue;
                     prevFulfilled.TryGetValue(entry.needId, out double fulfilled);
-                    newStates.Add(new NeedState(entry.needId, entry.resource, entry.amount, fulfilled,
-                        entry.label, NeedCategory.Comp, entry.penalties));
+                    prevSurplusRatio.TryGetValue(entry.needId, out double prevSurplus);
+                    NeedState ns = new NeedState(entry.needId, entry.resource, entry.amount, fulfilled,
+                        entry.label, NeedCategory.Comp, entry.penalties,
+                        entry.surplusBonuses, entry.maxSurplusRatio);
+                    ns.surplusRatio = prevSurplus;
+                    newStates.Add(ns);
                 }
             }
 

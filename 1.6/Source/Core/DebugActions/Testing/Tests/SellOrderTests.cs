@@ -41,7 +41,7 @@ namespace FactionColonies.SupplyChain
 
                 double expected = 40.0 * FCSettings.silverPerResource * 0.5;
                 TestAssert.AreEqual(expected, silver);
-                TestAssert.AreEqual(60.0, sp.GetAmount(r), "Sold amount should be drawn from the stockpile");
+                TestAssert.AreEqual(60.0, sp.GetAmount(r), 0.001, "Sold amount should be drawn from the stockpile");
             }
             finally
             {

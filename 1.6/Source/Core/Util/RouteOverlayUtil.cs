@@ -184,6 +184,7 @@ namespace FactionColonies.SupplyChain
 
             GUI.color = new Color(1f, 1f, 1f, 0.85f);
             Widgets.Label(labelRect, label);
+            GUI.color = Color.white;
             return true;
         }
 

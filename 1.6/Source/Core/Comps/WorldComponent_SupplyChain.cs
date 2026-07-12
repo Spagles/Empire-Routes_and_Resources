@@ -1025,13 +1025,14 @@ namespace FactionColonies.SupplyChain
         /// <summary>
         /// Dispatches every route whose scheduled dispatch tick has passed, drawing from the source
         /// stockpile and enqueuing an in-transit <see cref="PendingDelivery"/>. Each route reschedules
-        /// its next dispatch relative to now (never a backlog), and newly created/loaded routes are
-        /// scheduled lazily so their first delivery fires one full period after they appear.
+        /// its next dispatch relative to now (never a backlog), and newly created/loaded routes dispatch
+        /// immediately on the first daily tick after they appear, then every frequency period thereafter.
+        /// Routes are processed in <see cref="supplyRoutes"/> order, so a route earlier in the list wins
+        /// the draw when several share a source stockpile that can't satisfy them all this period.
         /// </summary>
         private void DispatchDueRoutes(FactionFC faction)
         {
             int now = Find.TickManager.TicksGame;
-            supplyRoutes.Sort((a, b) => a.priority.CompareTo(b.priority));
             List<SupplyRoute> invalidRoutes = null;
 
             foreach (SupplyRoute route in supplyRoutes)
@@ -1110,6 +1111,38 @@ namespace FactionColonies.SupplyChain
         {
             if (r is null || !supplyRoutes.Remove(r)) return; // remove first, then reassess the pair
             UnlinkPartners(r.source, r.destination);
+        }
+
+        /// <summary>
+        /// Repositions <paramref name="route"/> to sit just ahead of <paramref name="target"/> in
+        /// <see cref="supplyRoutes"/> (dispatch order = list order). Callers pass the visible neighbor
+        /// so reordering stays correct under the UI's direction/resource filters. Partner links are
+        /// unaffected — only the ordering changes.
+        /// </summary>
+        public void MoveRouteBefore(SupplyRoute route, SupplyRoute target)
+        {
+            if (!ReorderRoute(route, target, false)) return;
+            DirtyFlowCache();
+        }
+
+        /// <summary>Repositions <paramref name="route"/> to sit just behind <paramref name="target"/>
+        /// in <see cref="supplyRoutes"/>. Companion to <see cref="MoveRouteBefore"/>.</summary>
+        public void MoveRouteAfter(SupplyRoute route, SupplyRoute target)
+        {
+            if (!ReorderRoute(route, target, true)) return;
+            DirtyFlowCache();
+        }
+
+        private bool ReorderRoute(SupplyRoute route, SupplyRoute target, bool after)
+        {
+            if (route is null || target is null || route == target) return false;
+            int from = supplyRoutes.IndexOf(route);
+            if (from < 0) return false;
+            supplyRoutes.RemoveAt(from);
+            int to = supplyRoutes.IndexOf(target); // recomputed after the removal shifts indices
+            if (to < 0) { supplyRoutes.Insert(from, route); return false; } // target gone — restore
+            supplyRoutes.Insert(after ? to + 1 : to, route);
+            return true;
         }
 
         /// <summary>Registers a route's endpoints as partners. Partner-set only — does not touch the
@@ -1481,7 +1514,7 @@ namespace FactionColonies.SupplyChain
                 bool prevWordWrap = Text.WordWrap;
                 Text.WordWrap = false;
                 Rect labelRect = new Rect(contentX + 28f, drawY, 140f, barHeight);
-                Widgets.Label(labelRect, Text.ClampTextWithEllipsis(labelRect, def.label.CapitalizeFirst()));
+                Widgets.Label(labelRect, TextUtil.ClampWithEllipsis(labelRect, def.label.CapitalizeFirst()));
                 Text.WordWrap = prevWordWrap;
 
                 Rect barRect = new Rect(labelEndX, drawY + 4f, barWidth, barHeight - 8f);
@@ -1869,7 +1902,7 @@ namespace FactionColonies.SupplyChain
                 Text.WordWrap = false;
                 float nameWidth = nameColW - accentW - 10f;
                 Rect nameRect = new Rect(accentW + 6f, curY, nameWidth, settRowH);
-                Widgets.Label(nameRect, settlement.Name.Truncate(nameWidth));
+                Widgets.Label(nameRect, TextUtil.ClampWithEllipsis(nameRect, settlement.Name));
                 Text.WordWrap = prevWordWrap;
                 if (Mouse.IsOver(nameRect))
                     Widgets.DrawHighlight(nameRect);
@@ -1990,8 +2023,10 @@ namespace FactionColonies.SupplyChain
             Text.Font = GameFont.Small;
             curY += fbH + 4f;
 
+            // Pre-build the visible (filtered) list so the reorder arrows have indexable neighbors;
+            // cull invalid routes while we walk the master list.
             List<SupplyRoute> routesToRemove = null;
-            int rIdx = 0;
+            List<SupplyRoute> shown = new List<SupplyRoute>();
             foreach (SupplyRoute route in supplyRoutes)
             {
                 if (!route.IsValid())
@@ -2000,9 +2035,13 @@ namespace FactionColonies.SupplyChain
                     routesToRemove.Add(route);
                     continue;
                 }
+                if (routeFilterResource != null && route.resource != routeFilterResource) continue;
+                shown.Add(route);
+            }
 
-                if (routeFilterResource != null && route.resource != routeFilterResource)
-                    continue;
+            for (int v = 0; v < shown.Count; v++)
+            {
+                SupplyRoute route = shown[v];
 
                 // Cheap efficiency refresh only — the expensive travel-time/path pathfind is warmed off
                 // the UI thread by SupplyRouteWarmer; show a placeholder until it's ready.
@@ -2010,7 +2049,7 @@ namespace FactionColonies.SupplyChain
                 bool pathReady = route.PathReady;
 
                 Rect rRow = new Rect(0f, curY, rowW, routeRowH);
-                if (rIdx % 2 == 0) Widgets.DrawHighlight(rRow);
+                if (v % 2 == 0) Widgets.DrawHighlight(rRow);
 
                 float eff = (float)route.CachedEfficiency;
                 Color routeAccent = route.resource != null ? route.resource.color : Color.gray;
@@ -2018,7 +2057,23 @@ namespace FactionColonies.SupplyChain
                 Widgets.DrawBoxSolid(new Rect(0f, curY, accentW, routeRowH), routeAccent);
                 Widgets.DrawBoxSolid(new Rect(accentW + 2f, curY, accentW, routeRowH), effAccent);
 
-                float cx = accentW * 2 + 2f + 6f;
+                // Reorder arrows (dispatch precedence = list order). Break after a move — the master
+                // list just changed underneath us; the next frame redraws the new order.
+                float reorderX = accentW * 2 + 2f + 4f;
+                float arrowH2 = routeRowH / 2f;
+                if (v > 0 && Widgets.ButtonImage(new Rect(reorderX, curY, 14f, arrowH2), TexButton.ReorderUp))
+                {
+                    MoveRouteBefore(route, shown[v - 1]);
+                    break;
+                }
+                if (v < shown.Count - 1 && Widgets.ButtonImage(new Rect(reorderX, curY + arrowH2, 14f, arrowH2), TexButton.ReorderDown))
+                {
+                    MoveRouteAfter(route, shown[v + 1]);
+                    break;
+                }
+                TooltipHandler.TipRegion(new Rect(reorderX, curY, 14f, routeRowH), "SC_RouteReorderTooltip".Translate());
+
+                float cx = reorderX + 14f + 6f;
 
                 Text.Anchor = TextAnchor.MiddleLeft;
 
@@ -2081,7 +2136,6 @@ namespace FactionColonies.SupplyChain
 
                 Text.Anchor = TextAnchor.UpperLeft;
                 curY += routeRowH + rowGap;
-                rIdx++;
             }
 
             if (routesToRemove != null)
@@ -2303,9 +2357,9 @@ namespace FactionColonies.SupplyChain
             if (Widgets.ButtonText(new Rect(250f, curY, 130f, 24f), resLabel))
             {
                 List<FloatMenuOption> options = new List<FloatMenuOption>();
-                foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs)
+                // Only tithable resources: SetTitheInjection silently no-ops on the rest.
+                foreach (ResourceTypeDef def in FactionCache.TitheableResourceTypeDefs)
                 {
-                    if (def.isPoolResource) continue;
                     ResourceTypeDef captured = def;
                     options.Add(new FloatMenuOption(def.label.CapitalizeFirst(), delegate
                     {

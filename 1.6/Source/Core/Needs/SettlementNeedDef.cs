@@ -69,15 +69,18 @@ namespace FactionColonies.SupplyChain
             }
             if (fallback >= 0f) return fallback;
 
-            // No lower key — use the smallest defined key as a floor.
-            TechLevel smallestKey = TechLevel.Archotech;
+            // No lower key — use the smallest defined key as a floor. Seed from the first entry so an
+            // Archotech-only table still returns its weight (a strict-less seed of Archotech never would).
+            bool found = false;
+            TechLevel smallestKey = TechLevel.Undefined;
             float smallestVal = weight;
             foreach (TechLevelWeight t in weightsByTech)
             {
-                if (t.level < smallestKey)
+                if (!found || t.level < smallestKey)
                 {
                     smallestKey = t.level;
                     smallestVal = t.weight;
+                    found = true;
                 }
             }
             return smallestVal;

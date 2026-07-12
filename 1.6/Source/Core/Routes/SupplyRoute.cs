@@ -13,7 +13,6 @@ namespace FactionColonies.SupplyChain
         public WorldSettlementFC destination;
         public ResourceTypeDef resource;
         public double amountPerPeriod;
-        public int priority;
 
         // How often (in days) this route dispatches a delivery, and when its next dispatch is due.
         // nextDispatchTick = -1 is a sentinel meaning "not yet scheduled" — a new route dispatches
@@ -48,13 +47,12 @@ namespace FactionColonies.SupplyChain
         }
 
         public SupplyRoute(WorldSettlementFC source, WorldSettlementFC destination,
-            ResourceTypeDef resource, double amountPerPeriod, int priority = 0)
+            ResourceTypeDef resource, double amountPerPeriod)
         {
             this.source = source;
             this.destination = destination;
             this.resource = resource;
             this.amountPerPeriod = amountPerPeriod;
-            this.priority = priority;
 
             MarkPathDirty();
         }
@@ -217,7 +215,6 @@ namespace FactionColonies.SupplyChain
             Scribe_References.Look(ref destination, "destination");
             Scribe_Defs.Look(ref resource, "resource");
             Scribe_Values.Look(ref amountPerPeriod, "amountPerPeriod", 0.0);
-            Scribe_Values.Look(ref priority, "priority", 0);
             Scribe_Values.Look(ref frequencyDays, "frequencyDays", SupplyChainSettings.defaultRouteFrequencyDays);
             Scribe_Values.Look(ref nextDispatchTick, "nextDispatchTick", -1);
 

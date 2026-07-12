@@ -21,7 +21,7 @@
 		<releaseDate>2026-06-30</releaseDate>
 		<patchNoteType>Patch</patchNoteType>
 		<patchNoteLines>
-		<li>Seperate daily calculations (production, needs, stockpiling) from tax cycle-level calculations (routes, sell orders) in the UI</li>
+		<li>Separate daily calculations (production, needs, stockpiling) from tax cycle-level calculations (routes, sell orders) in the UI</li>
 		<li>Bugfix: rounding issues could create situations where a seemingly maxed-out production allocation slider produced constant clicking noises</li>
 		</patchNoteLines>
 		<authors>
@@ -53,7 +53,7 @@
 		<patchNoteType>Minor</patchNoteType>
 		<patchNoteLines>
 		<li>Replace the &quot;grace period&quot; mechanic with granting all settlements a small amount of food, logging, and mining stockpile when founded</li>
-		<li>Update the mod settings for clearer seperation, and to let the player tune the on-founding stockpile amounts</li>
+		<li>Update the mod settings for clearer separation, and to let the player tune the on-founding stockpile amounts</li>
 		<li>Allow routes to be edited after creation</li>
 		</patchNoteLines>
 		<authors>
@@ -69,7 +69,7 @@
 		<patchNoteType>Patch</patchNoteType>
 		<patchNoteLines>
 		<li>Rewrite the stat modifier description for sell rate multiplier, route efficiency bonus, and tax efficiency so that they read the same as every other stat modifier in the UI</li>
-		<li>Update the Overflow Silver tooltips to handul fractional amounts</li>
+		<li>Update the Overflow Silver tooltips to handle fractional amounts</li>
 		</patchNoteLines>
 		<authors>
 		<li>Matathias</li>

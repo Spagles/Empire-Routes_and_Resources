@@ -63,7 +63,7 @@ namespace FactionColonies.SupplyChain
                                 stockpile.TryDraw(r, loss, out drawn);
                                 if (convertToSilver && drawn > 0)
                                     silverAccum += FormulaUtil.OverflowSilver(drawn);
-                                LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                LogSC.Message("Stockpile event: "
                                     + settlement.Name + " " + r.label
                                     + " mult=" + mult + " drew " + drawn.ToString("F1"));
                             }
@@ -73,14 +73,14 @@ namespace FactionColonies.SupplyChain
                                 if (convertToSilver)
                                 {
                                     silverAccum += FormulaUtil.OverflowSilver(gain);
-                                    LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                    LogSC.Message("Stockpile event: "
                                         + settlement.Name + " " + r.label
                                         + " mult=" + mult + " sold " + gain.ToString("F1") + " for silver");
                                 }
                                 else
                                 {
                                     stockpile.Credit(r, gain);
-                                    LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                    LogSC.Message("Stockpile event: "
                                         + settlement.Name + " " + r.label
                                         + " mult=" + mult + " credited " + gain.ToString("F1"));
                                 }
@@ -97,14 +97,14 @@ namespace FactionColonies.SupplyChain
                             if (convertToSilver)
                             {
                                 silverAccum += FormulaUtil.OverflowSilver(delta);
-                                LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                LogSC.Message("Stockpile event: "
                                     + settlement.Name + " " + r.label
                                     + " sold " + delta.ToString("F1") + " for silver (flat)");
                             }
                             else
                             {
                                 stockpile.Credit(r, delta);
-                                LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                LogSC.Message("Stockpile event: "
                                     + settlement.Name + " " + r.label
                                     + " credited " + delta.ToString("F1") + " (flat)");
                             }
@@ -114,7 +114,7 @@ namespace FactionColonies.SupplyChain
                             double drawn;
                             stockpile.TryDraw(r, -delta, out drawn);
                             if (debug)
-                                LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                                LogSC.Message("Stockpile event: "
                                     + settlement.Name + " " + r.label
                                     + " drew " + drawn.ToString("F1") + " (flat)");
                         }
@@ -125,7 +125,7 @@ namespace FactionColonies.SupplyChain
                 {
                     settlement.AddOneTimeSilverIncome(silverAccum);
                     if (debug)
-                        LogSC.Message("[Empire-SupplyChain] Stockpile event: "
+                        LogSC.Message("Stockpile event: "
                             + settlement.Name + " salvaged " + silverAccum.ToString("F0") + " silver");
                 }
             }

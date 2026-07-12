@@ -33,7 +33,6 @@
     <SC_UnitsPerPeriod>{0} units/tax cycle</SC_UnitsPerPeriod>
     <SC_UnitsPerDay>{0} units/day</SC_UnitsPerDay>
     <SC_ExpectedSilver>~{0} silver</SC_ExpectedSilver>
-    <SC_SupplyRoutes>Supply Routes</SC_SupplyRoutes>
 
     <!-- Faction Tab - Simple Mode -->
     <SC_FactionStockpile>Faction Stockpile</SC_FactionStockpile>
@@ -63,8 +62,10 @@
     <SC_NoDeliveries>No deliveries in transit.</SC_NoDeliveries>
     <SC_DeliveryEta>Arrives in {0} ({1}% of the way there)</SC_DeliveryEta>
     <SC_FreqDays>{0}d</SC_FreqDays>
-    <SC_FrequencyLabel>Frequency</SC_FrequencyLabel>
     <SC_FrequencyTooltip>How often this route dispatches a delivery, in days. Each dispatch draws from the source immediately; the goods arrive at the destination after the route's travel time.</SC_FrequencyTooltip>
+    <SC_RouteReorderTooltip>Reorder routes. Routes higher in the list dispatch first when several share a source stockpile that can't satisfy them all.</SC_RouteReorderTooltip>
+    <SC_RouteFormNeedSuffix> (need: {0})</SC_RouteFormNeedSuffix>
+    <SC_RouteFormProdSuffix> (prod: {0})</SC_RouteFormProdSuffix>
 
     <!-- Stockpile Bar Flow Tooltips -->
     <SC_BarNetPositive>Daily net: +{0}/day</SC_BarNetPositive>
@@ -110,7 +111,6 @@
     <SC_RouteIn>IN</SC_RouteIn>
 
     <!-- Settlement Tab - Shared -->
-    <SC_ProdLabel>Prod: {0}</SC_ProdLabel>
     <SC_Units>{0} units</SC_Units>
     <SC_SilverDiverted>-{0} silver</SC_SilverDiverted>
     <SC_NoProduction>No Production</SC_NoProduction>
@@ -127,7 +127,6 @@
     <!-- Tithe Injection -->
     <SC_TitheInjection>Tithe Injection</SC_TitheInjection>
     <SC_TitheInjectionTooltip>Tithe injection converts stockpiled resources into additional tithe budget.\n\nConfigured amounts are drawn from the stockpile each day. The budget raises the tithe cap for that resource, letting you choose what items to receive via the tithe menu.\n\nIf the stockpile doesn't have enough, only what's available is injected.</SC_TitheInjectionTooltip>
-    <SC_TitheInjectionPerSettlement>Configure tithe injections per settlement in the settlement Supply Chain tab.</SC_TitheInjectionPerSettlement>
     <SC_NoTitheInjections>No tithe injections configured.</SC_NoTitheInjections>
     <SC_TitheBudgetValue>+{0} silver tithe budget</SC_TitheBudgetValue>
     <SC_TitheInjectionDesc>Supply chain tithe injection: +{0} {1} (~{2} silver)</SC_TitheInjectionDesc>
@@ -197,7 +196,6 @@
     <SC_NoStockpile>You have no stockpile to pull from!</SC_NoStockpile>
 
     <!-- Founding Cost Settings -->
-    <SC_SettingsFoundingHeader>Founding Costs</SC_SettingsFoundingHeader>
     <SC_SettingsFoundingThreshold>Free founding threshold: {0} (resource costs waived below this)</SC_SettingsFoundingThreshold>
     <SC_SettingsDistanceNorm>Distance normalizing days: {0} (smaller values = harsher distance scaling for settlement founding cost)</SC_SettingsDistanceNorm>
     <SC_SettingsBaseSurcharge>Base silver surcharge: {0} (multiplied by distance factor)</SC_SettingsBaseSurcharge>

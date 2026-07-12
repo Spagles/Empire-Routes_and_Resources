@@ -41,7 +41,7 @@ namespace FactionColonies.SupplyChain
             base.PreOpen();
             worldComp = SupplyChainCache.Comp;
             validator = worldComp?.FoundingValidator;
-            if (validator != null)
+            if (validator is object)
                 validator.ResetSourceSelection();
         }
 
@@ -145,7 +145,8 @@ namespace FactionColonies.SupplyChain
                 float resourceImgSize = RowHeight;
                 float resourceImxgX = 2f;
                 Rect resourceImgRect = new Rect(resourceImxgX, curY, resourceImgSize, resourceImgSize);
-                Widgets.ButtonImage(resourceImgRect, entry.resource.Icon);
+                if (entry.resource.Icon is object)
+                    GUI.DrawTexture(resourceImgRect, entry.resource.Icon);
                 GUI.color = sufficient ? AccentUtil.Income : AccentUtil.Expense;
                 Widgets.Label(new Rect(resourceImgRect.xMax + Padding, curY, inRect.width * 0.45f, RowHeight), entry.resource.LabelCap);
 
@@ -180,7 +181,7 @@ namespace FactionColonies.SupplyChain
         private void ShowSourceMenu(PlanetTile targetTile)
         {
             FactionFC faction = FindFC.FactionComp;
-            if (faction == null) return;
+            if (faction is null) return;
 
             List<FloatMenuOption> options = new List<FloatMenuOption>();
 
@@ -191,7 +192,7 @@ namespace FactionColonies.SupplyChain
                 IStockpile stockpile = comp?.GetStockpile();
 
                 string label = settlement.Name;
-                if (stockpile != null && cachedCosts != null)
+                if (stockpile is object && cachedCosts is object)
                 {
                     double menuDistMult = FoundingCostUtil.ComputeDistanceMultiplier(targetTile);
                     int sufficient = 0;
@@ -247,7 +248,7 @@ namespace FactionColonies.SupplyChain
             if (costs is null || costs.Count == 0) return;
 
             // Don't open duplicate
-            if (Find.WindowStack.WindowOfType<FCWindow_FoundingSource>() != null) return;
+            if (Find.WindowStack.WindowOfType<FCWindow_FoundingSource>() is object) return;
 
             Find.WindowStack.Add(new FCWindow_FoundingSource());
         }
@@ -258,7 +259,7 @@ namespace FactionColonies.SupplyChain
         public static void TryClose()
         {
             FCWindow_FoundingSource window = Find.WindowStack.WindowOfType<FCWindow_FoundingSource>();
-            if (window != null)
+            if (window is object)
                 window.Close();
         }
     }

@@ -36,7 +36,7 @@ namespace FactionColonies.SupplyChain
             // (no ResourceFC). That is not a logic failure, so skip rather than fail.
             bool accepted = comp.SetAllocation(r, 0.0);
             if (!accepted) TestAssert.Skip("Settlement does not track resource " + r.defName);
-            TestAssert.AreEqual(0.0, comp.GetAllocation(r), "GetAllocation should read back the manual zero");
+            TestAssert.AreEqual(0.0, comp.GetAllocation(r), 0.001, "GetAllocation should read back the manual zero");
 
             DestructiveTestUtil.AssertEmpireInvariants(f, "SetAllocation_Zero");
         }

@@ -431,6 +431,7 @@ namespace FactionColonies.SupplyChain
             if (resource is null)
             {
                 autoMaxResources.Remove(def);
+                autoMaxFallback.Remove(def);
                 return;
             }
 

@@ -58,7 +58,7 @@ namespace FactionColonies.SupplyChain
 
             TestAssert.IsFalse(ok, "TryDraw of zero should be a no-op false");
             TestAssert.AreEqual(0.0, drawn);
-            TestAssert.AreEqual(10.0, sp.GetAmount(r), "Amount must be unchanged");
+            TestAssert.AreEqual(10.0, sp.GetAmount(r), 0.001, "Amount must be unchanged");
         }
 
         [EmpireTest("SC.Stockpile")]
@@ -84,7 +84,7 @@ namespace FactionColonies.SupplyChain
 
             double excess = sp.Credit(r, 30.0);
 
-            TestAssert.AreEqual(0.0, excess, "Credit within cap returns no excess");
+            TestAssert.AreEqual(0.0, excess, 0.001, "Credit within cap returns no excess");
             TestAssert.AreEqual(30.0, sp.GetAmount(r));
         }
 
@@ -96,8 +96,8 @@ namespace FactionColonies.SupplyChain
 
             double excess = sp.Credit(r, 30.0);
 
-            TestAssert.AreEqual(20.0, excess, "Only 10 fits; 20 should be returned as excess");
-            TestAssert.AreEqual(100.0, sp.GetAmount(r), "Amount is clamped to cap");
+            TestAssert.AreEqual(20.0, excess, 0.001, "Only 10 fits; 20 should be returned as excess");
+            TestAssert.AreEqual(100.0, sp.GetAmount(r), 0.001, "Amount is clamped to cap");
         }
 
         [EmpireTest("SC.Stockpile")]
@@ -108,7 +108,7 @@ namespace FactionColonies.SupplyChain
 
             double excess = sp.Credit(r, 10.0);
 
-            TestAssert.AreEqual(10.0, excess, "Nothing fits under a zero cap");
+            TestAssert.AreEqual(10.0, excess, 0.001, "Nothing fits under a zero cap");
             TestAssert.AreEqual(0.0, sp.GetAmount(r));
         }
 
@@ -121,7 +121,7 @@ namespace FactionColonies.SupplyChain
             double excess = sp.Credit(r, -5.0);
 
             TestAssert.AreEqual(0.0, excess);
-            TestAssert.AreEqual(5.0, sp.GetAmount(r), "Negative credit must not change the amount");
+            TestAssert.AreEqual(5.0, sp.GetAmount(r), 0.001, "Negative credit must not change the amount");
         }
 
         /*-*-*- GetAmount / GetCap defaults -*-*-*/

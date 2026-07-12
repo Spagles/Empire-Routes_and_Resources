@@ -51,7 +51,7 @@ namespace FactionColonies.SupplyChain
                 {
                     if (ns.demanded <= 0) continue;
                     anyPositiveDemand = true;
-                    TestAssert.AreEqual(0.0, ns.fulfilled,
+                    TestAssert.AreEqual(0.0, ns.fulfilled, 0.001,
                         "Empty stockpile should fulfill nothing for '" + ns.label + "'");
                 }
             }

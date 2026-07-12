@@ -111,7 +111,7 @@
   <FactionColonies.FCEventDef>
     <defName>sc_tradeCartel_refused</defName>
     <label>Principled Stand</label>
-    <desc>Your settlers appreciate the principled refusal to deal with cartels, but said cartels aren't pleased to have been rebuffed. They see their revenge through undermining your trade operations</desc>
+    <desc>Your settlers appreciate the principled refusal to deal with cartels, but said cartels aren't pleased to have been rebuffed. They see their revenge through undermining your trade operations.</desc>
     <category>EC_SupplyChain</category>
     <timeTillTrigger>300000</timeTillTrigger>
     <statModifiers>

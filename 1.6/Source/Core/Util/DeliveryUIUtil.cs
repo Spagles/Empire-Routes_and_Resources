@@ -118,6 +118,7 @@ namespace FactionColonies.SupplyChain
         /// </summary>
         public static void DrawFrequencyStepper(Rect rect, SupplyRoute route, Action onChanged)
         {
+            TextAnchor prevAnchor = Text.Anchor;
             float y = rect.y + (rect.height - 24f) / 2f;
             Rect minusRect = new Rect(rect.x, y, 16f, 24f);
             Rect labelRect = new Rect(rect.x + 17f, rect.y, 24f, rect.height);
@@ -131,7 +132,7 @@ namespace FactionColonies.SupplyChain
 
             Text.Anchor = TextAnchor.MiddleCenter;
             Widgets.Label(labelRect, "SC_FreqDays".Translate(route.frequencyDays));
-            Text.Anchor = TextAnchor.MiddleLeft;
+            Text.Anchor = prevAnchor;
 
             if (Widgets.ButtonText(plusRect, "+"))
             {

@@ -88,7 +88,10 @@ namespace FactionColonies.SupplyChain
         {
             PlanetTile tile = settlement?.Tile ?? FindFC.CapitalLocation;
             if (tile == PlanetTile.Invalid)
-                tile = Find.AnyPlayerHomeMap.Tile;
+            {
+                Map home = Find.AnyPlayerHomeMap;
+                if (home is object) tile = home.Tile;
+            }
 
             return tile;
         }

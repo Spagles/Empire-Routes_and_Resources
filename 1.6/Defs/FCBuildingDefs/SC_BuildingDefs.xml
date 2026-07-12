@@ -197,14 +197,13 @@
 	</FactionColonies.BuildingFCDef>
 
 	<!-- Tier 2: Arsenal (Industrial, upgrade from Armory) -->
-	<FactionColonies.BuildingFCDef ParentName="BuildingFCDef_Surface_Spacer">
+	<FactionColonies.BuildingFCDef ParentName="BuildingFCDef_Surface_Industrial">
 		<defName>SC_Arsenal</defName>
 		<label>Arsenal</label>
 		<desc>A high-security weapons depot with advanced containment for volatile materials. Stores military equipment and chemfuel reserves.</desc>
 		<cost>1300</cost>
 		<constructionDuration>90000</constructionDuration>
 		<upkeep>175</upkeep>
-		<techLevel>Industrial</techLevel>
 		<baseBuilding>false</baseBuilding>
 		<iconPath>Buildings/Arsenal</iconPath>
 		<modExtensions>
@@ -256,7 +255,6 @@
 		<constructionDuration>120000</constructionDuration>
 		<upkeep>225</upkeep>
 		<baseBuilding>false</baseBuilding>
-		<techLevel>Spacer</techLevel>
 		<iconPath>Buildings/PowerReserve</iconPath>
 		<modExtensions>
 			<li Class="FactionColonies.SupplyChain.BuildingNeedExtension">
