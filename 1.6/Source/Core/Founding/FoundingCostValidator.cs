@@ -25,6 +25,14 @@ namespace FactionColonies.SupplyChain
         /// </summary>
         public bool UserSelectedSource;
 
+        // The cost multiplier the active founding flow last passed in. The companion window reads this
+        // so its displayed have/needed rows apply the same multiplier the commit path will draw with
+        // (base founding passes 1f; alternative callers e.g. outpost conversion may pass less).
+        private float lastCostMultiplier = 1f;
+
+        /// <summary>The cost multiplier from the most recent validation/description call.</summary>
+        public float LastCostMultiplier => lastCostMultiplier;
+
         public FoundingCostValidator(WorldComponent_SupplyChain worldComp)
         {
             this.worldComp = worldComp;
@@ -33,6 +41,7 @@ namespace FactionColonies.SupplyChain
         public bool CanFoundSettlement(PlanetTile tile, WorldSettlementDef type, out string reason, float costMultiplier)
         {
             reason = null;
+            lastCostMultiplier = costMultiplier;
 
             List<FCResourceCost> costs = FoundingCostUtil.GetFoundingResourceCosts(type);
             if (costs is null || costs.Count == 0) return true;
@@ -76,6 +85,7 @@ namespace FactionColonies.SupplyChain
 
         public string GetAdditionalCostDescription(PlanetTile tile, WorldSettlementDef type, float costMultiplier)
         {
+            lastCostMultiplier = costMultiplier;
             List<FCResourceCost> costs = FoundingCostUtil.GetFoundingResourceCosts(type);
             if (costs is null || costs.Count == 0) return null;
             if (IsBelowThreshold()) return null;
@@ -98,6 +108,7 @@ namespace FactionColonies.SupplyChain
 
         public void OnSettlementFounded(PlanetTile tile, WorldSettlementDef type, float costMultiplier)
         {
+            lastCostMultiplier = costMultiplier;
             List<FCResourceCost> costs = FoundingCostUtil.GetFoundingResourceCosts(type);
             if (costs is null || costs.Count == 0) return;
             if (IsBelowThreshold()) return;

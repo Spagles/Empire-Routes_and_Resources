@@ -137,7 +137,7 @@ namespace FactionColonies.SupplyChain
             for (int i = 0; i < cachedCosts.Count; i++)
             {
                 FCResourceCost entry = cachedCosts[i];
-                double needed = FormulaUtil.ResourceCost(entry.amount, distMult);
+                double needed = FormulaUtil.ResourceCost(entry.amount, distMult) * validator.LastCostMultiplier;
                 double have = stockpile?.GetAmount(entry.resource) ?? 0;
                 bool sufficient = have >= needed;
 
@@ -197,7 +197,7 @@ namespace FactionColonies.SupplyChain
                     int sufficient = 0;
                     foreach (FCResourceCost entry in cachedCosts)
                     {
-                        double needed = FormulaUtil.ResourceCost(entry.amount, menuDistMult);
+                        double needed = FormulaUtil.ResourceCost(entry.amount, menuDistMult) * validator.LastCostMultiplier;
                         if (stockpile.GetAmount(entry.resource) >= needed) sufficient++;
                     }
                     label += $" ({sufficient}/{cachedCosts.Count})";
