@@ -680,6 +680,8 @@ namespace FactionColonies.SupplyChain
             WorldSettlementFC ws = WorldSettlement;
             if (ws is null) return;
 
+            GameFont prevFont = Text.Font;
+
             // --- Direction toggle (fixed above scroll) ---
             Text.Font = GameFont.Tiny;
             float toggleW = rect.width / 2f;
@@ -866,16 +868,15 @@ namespace FactionColonies.SupplyChain
 
             if (routeIdx == 0)
             {
-                //Text.Font = GameFont.Tiny;
                 GUI.color = Color.gray;
                 Widgets.Label(new Rect(AccentW + 6f, curY, viewRect.width, 24f),
                     "SC_NoRoutesDirection".Translate());
                 GUI.color = Color.white;
-                //Text.Font = GameFont.Small;
                 curY += 26f;
             }
 
             ScrollUtil.EndScrollView();
+            Text.Font = prevFont;
         }
 
         // --- Complex Sub-Tab 5: Deliveries (in-transit, filtered to this settlement) ---
