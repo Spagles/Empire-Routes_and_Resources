@@ -183,6 +183,9 @@ namespace FactionColonies.SupplyChain
             connectedPartners = partners;
             hubScore = hub;
             statModsDirty = true;
+            // The settlement bakes our IStatModifierProvider contributions into its own stat cache, so
+            // the network bonuses only refresh once that cache is invalidated — do it now, not next daily pass.
+            WorldSettlement?.InvalidateStatCache();
         }
 
         // --- Incremental partner-set maintenance ---
