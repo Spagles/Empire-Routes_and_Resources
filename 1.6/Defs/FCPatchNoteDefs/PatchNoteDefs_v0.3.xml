@@ -95,4 +95,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_6</defName>
+		<label>Warhouse Chain Building Art</label>
+		<description>Adds new art for the warhouse building chain, courtesy of Midnight.</description>
+		<releaseDate>2026-07-13</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>New art for Storehouse, Warehouse, Warehouse Complex, and Logistics Hub</li>
+		</patchNoteLines>
+		<authors>
+		<li>Midnight</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

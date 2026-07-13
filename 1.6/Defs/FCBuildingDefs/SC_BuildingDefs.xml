@@ -76,7 +76,7 @@
 		<upkeep>175</upkeep>
 		<baseBuilding>false</baseBuilding>
 		<techLevel>Spacer</techLevel>
-		<iconPath>Buildings/WarehouseComplex</iconPath>
+		<iconPath>Buildings/Warehouse_Complex</iconPath>
 		<upgrades>
 			<li>SC_LogisticsHub</li>
 		</upgrades>
@@ -107,7 +107,7 @@
 		<upkeep>300</upkeep>
 		<baseBuilding>false</baseBuilding>
 		<techLevel>Ultra</techLevel>
-		<iconPath>Buildings/LogisticsHub</iconPath>
+		<iconPath>Buildings/Logistics_Complex</iconPath>
 		<modExtensions>
 			<li Class="FactionColonies.SupplyChain.BuildingNeedExtension">
 				<capBonuses>
