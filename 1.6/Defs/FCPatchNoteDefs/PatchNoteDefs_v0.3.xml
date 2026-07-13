@@ -75,4 +75,24 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_5</defName>
+		<label>Bugfixing</label>
+		<description>Numerous bugfixes.</description>
+		<releaseDate>2026-07-13</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>Bugfix: route deliveries that hit after loading the game but before a tax cycle would disappear into the void</li>
+		<li>Bugfix: in Simple mode, on founding a new settlement, stockpile caps wouldn&apos;t be recalculated until after the new-settlement starting resources are granted, meaning that some of those starting resources could be lost to the abyss</li>
+		<li>Bugfix: events with a &apos;convert to silver&apos; option wouldn&apos;t actually convert the goods to silver</li>
+		<li>Bugfix: when switching from simple to complex mode, the distributed resources could overflow a settlement&apos;s stockpile cap and be silently lost</li>
+		<li>Bugfix: the settlement cost shown in the new settlement screen could deviate from the settlement cost the game uses to check if the player can afford it</li>
+		<li>Bugfix: in simple mode, an event with a stockpile-based multiplier could end up stacking that multiplier against the faction stockpile a number of times equal to the number of settlements involved</li>
+		<li>Bugfix: incomplete translation string for Tithe Injection Description</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
