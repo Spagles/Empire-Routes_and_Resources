@@ -109,4 +109,18 @@
 		<li>Midnight</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_7</defName>
+		<label>Updated Placeholder Art</label>
+		<description>Added new building placeholder art to make it easier to tell the buildings apart.</description>
+		<releaseDate>2026-07-13</releaseDate>
+		<patchNoteType>Minor</patchNoteType>
+		<patchNoteLines>
+		<li>New placeholder art for Armory, Arsenal, Cold Storage, Distribution Center, Power Reserve, and Power Vault</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
