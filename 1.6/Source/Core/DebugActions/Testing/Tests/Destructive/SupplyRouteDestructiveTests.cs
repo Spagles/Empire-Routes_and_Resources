@@ -86,6 +86,54 @@ namespace FactionColonies.SupplyChain
         }
 
         [EmpireDestructiveTest("SC.Destructive.Routes")]
+        public static void Dispatch_PoolResource_ShipsAndOverflowIsLostNotSold()
+        {
+            // Pool resources (power/research) are routable like any other resource once diverted
+            // into a stockpile. Their over-cap arrival is silently lost — pool resources have no
+            // silver value, so there is no overflow auto-sell anywhere in their flow.
+            FactionFC f = DestructiveTestUtil.RequireFaction();
+            ResourceTypeDef r = SupplyChainCache.AllResourceTypeDefs.FirstOrDefault(dr => dr.isPoolResource);
+            if (r is null) TestAssert.Skip("No pool resource types defined");
+
+            WorldSettlementFC src = SCDestructiveTestUtil.SettlementAt(f, 0);
+            WorldSettlementFC dst = SCDestructiveTestUtil.SettlementAt(f, 1);
+            if (src is null || dst is null) TestAssert.Skip("Could not obtain two settlements");
+            if (src == dst) TestAssert.Skip("Only one settlement available; need a distinct source and destination");
+
+            var route = new SupplyRoute(src, dst, r, 50.0);
+            route.RecacheIfDirty();
+            double eff = route.CachedEfficiency;
+            if (eff <= 0.0) TestAssert.Skip("Route resolved to zero efficiency");
+
+            DictionaryStockpile sourceSp = SCTestHelper.MakeStockpile(r, 100.0, 100.0);
+            DictionaryStockpile destSp = SCTestHelper.MakeStockpile(r, 0.0, 1000.0);
+
+            PendingDelivery d = route.TryDispatch(sourceSp);
+            TestAssert.IsNotNull(d, "TryDispatch should produce a delivery for a pool resource");
+            TestAssert.AreEqual(50.0, d.amount, 0.01, "Delivery carries the drawn pool-resource amount");
+            TestAssert.AreEqual(50.0, sourceSp.GetAmount(r), 0.01, "Source pool-resource stock is drawn at dispatch");
+
+            double credited = d.amount * d.efficiency;
+            double excess = destSp.Credit(r, credited);
+            TestAssert.AreEqual(50.0 * eff, credited - excess, 0.01,
+                "Received should equal drawn * efficiency when the destination has room");
+            TestAssert.AreEqual(credited - excess, destSp.GetAmount(r), 0.01,
+                "Destination should hold exactly the received pool-resource amount");
+
+            // Over-cap arrival: what doesn't fit is dropped.
+            DictionaryStockpile tinySp = SCTestHelper.MakeStockpile(r, 0.0, 1.0);
+            PendingDelivery d2 = route.TryDispatch(sourceSp);
+            TestAssert.IsNotNull(d2, "Second dispatch should draw the remaining source stock");
+            double credited2 = d2.amount * d2.efficiency;
+            double excess2 = tinySp.Credit(r, credited2);
+            TestAssert.AreEqual(credited2 - excess2, tinySp.GetAmount(r), 0.01,
+                "A capped destination holds only what fit; the pool-resource excess is lost");
+            TestAssert.LessThanOrEqual(tinySp.GetAmount(r), 1.0, "Received cannot exceed the destination cap");
+
+            DestructiveTestUtil.AssertEmpireInvariants(f, "SupplyRoute_PoolResource");
+        }
+
+        [EmpireDestructiveTest("SC.Destructive.Routes")]
         public static void SetFrequencyDays_OutOfRange_ClampsToBounds()
         {
             // A10: dispatch frequency is clamped to [minRouteFrequencyDays, maxRouteFrequencyDays].

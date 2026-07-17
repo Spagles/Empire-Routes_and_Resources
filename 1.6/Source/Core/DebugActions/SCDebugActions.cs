@@ -255,7 +255,8 @@ namespace FactionColonies.SupplyChain
                 {
                     s.UpgradeSettlement(Rand.RangeInclusive(1, 9));
 
-                    // Non-pool so the resource can actually be stockpiled and shipped.
+                    // Non-pool so the scenario also exercises the silver flows (sell orders,
+                    // overflow auto-sell), which pool resources never enter.
                     ResourceFC chosen = s.Resources.Where(r => r.def != null && !r.def.isPoolResource).RandomElementWithFallback(null);
                     if (chosen == null) continue;
                     workedResource[s] = chosen.def;

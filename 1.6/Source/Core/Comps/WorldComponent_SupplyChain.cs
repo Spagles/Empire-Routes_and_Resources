@@ -2179,7 +2179,6 @@ namespace FactionColonies.SupplyChain
                 List<FloatMenuOption> options = new List<FloatMenuOption>();
                 foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs)
                 {
-                    if (def.isPoolResource) continue;
                     ResourceTypeDef captured = def;
                     options.Add(new FloatMenuOption(def.label.CapitalizeFirst(), delegate { newRouteResource = captured; }));
                 }

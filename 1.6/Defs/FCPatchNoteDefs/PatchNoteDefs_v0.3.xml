@@ -138,4 +138,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_0_3_9</defName>
+		<label>Power and Research Routing</label>
+		<description>In complex mode, power and research can now be routed, just like any other resource.</description>
+		<releaseDate>2026-07-17</releaseDate>
+		<patchNoteType>Patch</patchNoteType>
+		<patchNoteLines>
+		<li>Removes an overzealous guard in the routing functions that prevented power and research from being routed</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
