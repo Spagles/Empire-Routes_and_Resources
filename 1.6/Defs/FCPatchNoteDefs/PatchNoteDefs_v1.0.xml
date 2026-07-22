@@ -27,4 +27,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_1_0_2</defName>
+		<label>Warning Letter Update</label>
+		<description>Fixes a bug where the letter that warns about settlements costing resources would be sent too early.</description>
+		<releaseDate>2026-07-21</releaseDate>
+		<patchNoteType>Hotfix</patchNoteType>
+		<patchNoteLines>
+		<li>The letter that warns about new settlements costing resources will now be sent immediately after founding the last silver-only settlement.</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

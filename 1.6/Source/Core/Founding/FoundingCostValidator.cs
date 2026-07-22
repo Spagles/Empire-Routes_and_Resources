@@ -111,6 +111,8 @@ namespace FactionColonies.SupplyChain
         public void OnSettlementFounded(PlanetTile tile, WorldSettlementDef type, float costMultiplier)
         {
             lastCostMultiplier = costMultiplier;
+            worldComp.MaybeAnnounceUpcomingFoundingCosts();   // look-ahead warning, once
+
             List<FCResourceCost> costs = FoundingCostUtil.GetFoundingResourceCosts(type);
             if (costs is null || costs.Count == 0) return;
             if (IsBelowThreshold()) return;

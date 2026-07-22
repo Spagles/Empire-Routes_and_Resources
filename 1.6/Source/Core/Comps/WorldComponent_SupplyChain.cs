@@ -1288,23 +1288,28 @@ namespace FactionColonies.SupplyChain
                 if (startSp == null) break;
                 startSp.Credit(def, amt);
             }
+        }
 
-            if (!thresholdLetterSent)
+        /// <summary>
+        /// Fires the one-time "resource costs now apply" letter on the founding that reaches
+        /// the free-settlement gate, warning that the next founding will be the first to cost
+        /// resources. Called from FoundingCostValidator.OnSettlementFounded, where the founding
+        /// being committed is not yet in settlements or settlementCaravansList — so +1 counts it.
+        /// </summary>
+        public void MaybeAnnounceUpcomingFoundingCosts()
+        {
+            if (thresholdLetterSent) return;
+            FactionFC faction = FindFC.FactionComp;
+            if (faction is null) return;
+            int committed = faction.settlements.Count + faction.settlementCaravansList.Count;
+            if (committed + 1 >= SupplyChainSettings.freeSettlementThreshold)
             {
-                FactionFC faction = FindFC.FactionComp;
-                if (faction is object)
-                {
-                    int count = faction.settlements.Count + faction.settlementCaravansList.Count;
-                    if (count >= SupplyChainSettings.freeSettlementThreshold)
-                    {
-                        thresholdLetterSent = true;
-                        Find.LetterStack.ReceiveLetter(
-                            "SC_ThresholdLetterTitle".Translate(),
-                            "SC_ThresholdLetterBody".Translate(
-                                FindFC.EmpireTitle, SupplyChainSettings.freeSettlementThreshold.ToString()),
-                            LetterDefOf.NeutralEvent);
-                    }
-                }
+                thresholdLetterSent = true;
+                Find.LetterStack.ReceiveLetter(
+                    "SC_ThresholdLetterTitle".Translate(),
+                    "SC_ThresholdLetterBody".Translate(
+                        FindFC.EmpireTitle, SupplyChainSettings.freeSettlementThreshold.ToString()),
+                    LetterDefOf.NeutralEvent);
             }
         }
 

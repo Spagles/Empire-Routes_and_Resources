@@ -204,7 +204,7 @@
 
     <!-- Threshold Letter -->
     <SC_ThresholdLetterTitle>Resource Costs Now Apply</SC_ThresholdLetterTitle>
-    <SC_ThresholdLetterBody>Your {0} has reached {1} settlements. From now on, founding new settlements will require resources from your stockpile in addition to the silver cost.\n\nYou can view the required resources in the settlement creation window.</SC_ThresholdLetterBody>
+    <SC_ThresholdLetterBody>Your {0} has now sent for {1} settlements. From now on, founding new settlements will require resources from your stockpile in addition to the silver cost.\n\nYou can view the required resources in the settlement creation window.</SC_ThresholdLetterBody>
 
     <!-- Buy Resources -->
     <SC_BuyOption>Buy {0}x {1}: {2} silver</SC_BuyOption>
