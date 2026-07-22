@@ -124,23 +124,21 @@ namespace FactionColonies.SupplyChain
             SupplyChainCache.ClearCompCache();
             capsAndStockpilesDirty = true;
 
-            // Reconcile with global settings (mode may have changed while this save was unloaded)
-            if (mode != SupplyChainSettings.mode)
+            // Reconcile with global settings (mode may have changed while this save was unloaded).
+            // Only the new-game path runs here: on load, SwitchMode redistributes stockpiles across
+            // settlements whose cross-refs aren't resolved until after FinalizeInit, so the load-path
+            // reconciliation runs from ExposeData's PostLoadInit pass instead.
+            if (!fromLoad && mode != SupplyChainSettings.mode)
             {
-                LogSC.MessageForce("Mode mismatch: save=" + mode + ", settings=" + SupplyChainSettings.mode + ". Switching.");
+                LogSC.MessageForce("Mode mismatch: current=" + mode + ", settings=" + SupplyChainSettings.mode + ". Switching.");
                 SwitchMode(SupplyChainSettings.mode);
             }
 
-            // Eagerly init local stockpile wrappers / faction caps on load. FinalizeInit set
-            // capsAndStockpilesDirty above but nothing consumes it until the first daily pass, which
-            // runs ProcessArrivals/DispatchDueRoutes before it ensures wrappers — so arriving deliveries
-            // would be credited to a null wrapper and lost. Doing it here guarantees GetStockpile() is
-            // live for every consumer immediately after load.
+            // Warm up local stockpile wrappers / faction caps, the transient trade-network partner
+            // sets, and the delivery caravans. This call covers the new-game path; on load these are
+            // no-ops here because the settlement/route cross-refs aren't resolved until after
+            // FinalizeInit, so the load-path warm-up runs from ExposeData's PostLoadInit pass instead.
             EnsureCapsAndStockpiles();
-
-            // Rebuild the transient trade-network partner sets from the loaded routes (Complex mode).
-            // The serialized connectedPartners/hubScore keep bonuses valid until this runs; the
-            // recompute is a no-op on the stat cache when it matches (SetNetworkInfo early-out).
             if (mode == SupplyChainMode.Complex)
                 RebuildAllPartnerSets(FindFC.FactionComp);
             ReconcileDeliveryCaravans();
@@ -341,6 +339,30 @@ namespace FactionColonies.SupplyChain
                     dormantRoutes = new List<SupplyRoute>();
                 if (pendingDeliveries == null)
                     pendingDeliveries = new List<PendingDelivery>();
+
+                // Cross-refs (faction.settlements, route endpoints) resolve before this PostLoadInit
+                // pass but AFTER World.FinalizeInit, where the load-time init first runs against
+                // still-empty lists. Redo it here now that the references are live: reconcile the mode,
+                // then rebuild the per-settlement stockpile wrappers and trade-network partner sets.
+                // (New games don't reach this branch; their references are already live at FinalizeInit,
+                // which handles them.)
+                SupplyChainCache.ClearCompCache();
+
+                // Reconcile the loaded mode with the global setting (it may have changed while this save
+                // was unloaded). SwitchMode redistributes stockpiles across settlements, so running it at
+                // FinalizeInit against an empty settlement list would clear the faction stockpile without
+                // distributing it (Complex) or strand the local stockpiles (Simple) — hence it runs here.
+                if (mode != SupplyChainSettings.mode)
+                {
+                    LogSC.MessageForce("Mode mismatch on load: save=" + mode + ", settings=" + SupplyChainSettings.mode + ". Switching.");
+                    SwitchMode(SupplyChainSettings.mode);
+                }
+
+                capsAndStockpilesDirty = true;
+                EnsureCapsAndStockpiles();
+                if (mode == SupplyChainMode.Complex)
+                    RebuildAllPartnerSets(FindFC.FactionComp);
+                ReconcileDeliveryCaravans();
             }
         }
 
