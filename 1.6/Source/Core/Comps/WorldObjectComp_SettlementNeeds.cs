@@ -227,14 +227,21 @@ namespace FactionColonies.SupplyChain
             return value;
         }
 
+        // Unrest is displayed inverted from the other daily-drift stats: a rise in unrest is
+        // bad (shown as a positive number) whereas a rise in happiness/loyalty/prosperity is
+        // good. Both ColorizePenalty and the surplus line branch on this.
+        private static bool IsUnrestStat(FCStatDef stat)
+        {
+            return stat == FCStatDefOf.unrestGainedBase || stat == FCStatDefOf.unrestGainedMultiplier
+                || stat == FCStatDefOf.unrestLostBase   || stat == FCStatDefOf.unrestLostMultiplier;
+        }
+
         // A need penalty (and a suppressed base-drift) is always detrimental, so it renders
         // red. Happiness/loyalty losses show as a negative number; unrest is inverted, so a
         // rise in unrest shows as a positive number. `magnitude` is a positive quantity.
         private static string ColorizePenalty(double magnitude, FCStatDef stat)
         {
-            bool unrestStat = stat == FCStatDefOf.unrestGainedBase || stat == FCStatDefOf.unrestGainedMultiplier
-                           || stat == FCStatDefOf.unrestLostBase || stat == FCStatDefOf.unrestLostMultiplier;
-            return unrestStat
+            return IsUnrestStat(stat)
                 ? TextUtil.ColorizeAdditiveBonus(magnitude, invert: true)      // "+mag" red
                 : TextUtil.ColorizeAdditiveBonus(magnitude, hardinvert: true); // "-mag" red
         }
@@ -294,7 +301,12 @@ namespace FactionColonies.SupplyChain
                     double val = bonus.maxBonus * fraction;
                     if (val <= 0) continue;
 
-                    string line = "SC_SurplusBonus".Translate(bonus.label ?? state.label, val.ToString("F1"));
+                    // Surplus bonuses are always beneficial. Unrest surplus raises "unrest lost"
+                    // (a net reduction) and must render as a green negative; the other stats are
+                    // raised directly and render as a green positive.
+                    bool unrestStat = IsUnrestStat(bonus.stat);
+                    string line = TextUtil.AdditiveBonusLine(val, bonus.label ?? state.label,
+                        invert: unrestStat, hardinvert: unrestStat);
                     desc = desc is null ? line : desc + "\n" + line;
                 }
             }

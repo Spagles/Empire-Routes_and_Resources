@@ -172,9 +172,6 @@
     <!-- Stabilization Suppression -->
     <SC_StabilizationSuppressed>{0} - Unmet needs</SC_StabilizationSuppressed>
 
-    <!-- Surplus Bonuses -->
-    <SC_SurplusBonus>{0} surplus: +{1}</SC_SurplusBonus>
-
     <!-- Trade Network -->
     <SC_NetworkPartnerBonus>Trade partners ({0}): +{1}</SC_NetworkPartnerBonus>
     <SC_NetworkHubBonus>Trade hub ({0}): +{1}</SC_NetworkHubBonus>

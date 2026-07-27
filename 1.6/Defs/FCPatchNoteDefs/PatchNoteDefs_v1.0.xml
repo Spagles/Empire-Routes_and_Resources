@@ -41,4 +41,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_1_0_3</defName>
+		<label>Stat Tooltip Fix</label>
+		<description>Fixes an issue with settlement stat tooltip formatting.</description>
+		<releaseDate>2026-07-27</releaseDate>
+		<patchNoteType>Hotfix</patchNoteType>
+		<patchNoteLines>
+		<li>Bugfix: The happiness/loyalty/unrest/prosperity bonus from having a need surplus is not formatted correctly in the tooltip</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>
