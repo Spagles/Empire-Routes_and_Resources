@@ -55,4 +55,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_1_0_4</defName>
+		<label>Settlement Upgrading Fix</label>
+		<description>Fixes an issue where upgradng a settlement can result in its needs being unment, even if the settlement has enough resources stockpiled.</description>
+		<releaseDate>2026-07-27</releaseDate>
+		<patchNoteType>Hotfix</patchNoteType>
+		<patchNoteLines>
+		<li>Bugfix: after any change that shifts a settlement&apos;s needs demand, its need could be marked as unmet, even if the settlement has enough resources stockpiled</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

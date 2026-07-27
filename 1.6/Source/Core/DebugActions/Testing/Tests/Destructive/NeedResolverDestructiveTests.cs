@@ -161,6 +161,66 @@ namespace FactionColonies.SupplyChain
             DestructiveTestUtil.AssertEmpireInvariants(f, "ResolveSettlementNeedsFair_Scarce");
         }
 
+        [EmpireDestructiveTest("SC.Destructive.Needs")]
+        public static void RebuildNeedStates_AfterUpgrade_MetNeedStaysMet()
+        {
+            // Regression: a settlement upgrade raises per-level need demand and rebuilds need-states.
+            // RebuildNeedStates must rescale the preserved satisfaction to the new demand, so a need
+            // that was fully met stays met — not flash a false shortfall (and its stat penalty) until
+            // the next daily resolution redraws. Reproduces the reported "needs unmet right after
+            // upgrade, fixed by invoking daily accrual" bug.
+            FactionFC f = DestructiveTestUtil.RequireFaction();
+            WorldSettlementFC s = SCDestructiveTestUtil.FirstOrTransient(f);
+            if (s is null) TestAssert.Skip("No settlement available");
+            WorldObjectComp_SettlementNeeds needsComp = SupplyChainCache.GetNeedsComp(s);
+            if (needsComp is null) TestAssert.Skip("Settlement has no needs comp");
+
+            int cap = System.Math.Min(FCSettings.settlementMaxLevel, s.settlementDef.maxSettlementLevel);
+            if (cap < 1) TestAssert.Skip("Settlement type cannot be leveled");
+
+            int originalLevel = s.settlementLevel;
+            try
+            {
+                // Ensure there is headroom to upgrade by one level.
+                if (s.settlementLevel >= cap)
+                    s.UpgradeSettlement(cap - 1 - s.settlementLevel);
+
+                // Fully satisfy needs at the starting level so each need's satisfaction ratio is 1.0.
+                NeedResolver.ResolveSettlementNeeds(s, SCDestructiveTestUtil.AbundantStockpile(), needsComp);
+
+                Dictionary<string, double> demandBefore = new Dictionary<string, double>();
+                foreach (NeedState ns in needsComp.NeedStates)
+                    demandBefore[ns.needId] = ns.demanded;
+
+                // The reported action: upgrade one level. Fires OnSettlementUpgraded -> RebuildNeedStates.
+                s.UpgradeSettlement(1);
+
+                // Needs whose demand actually rose (per-level scaling) exercise the rescale path.
+                int exercised = 0;
+                foreach (NeedState ns in needsComp.NeedStates)
+                {
+                    if (ns.demanded <= 0) continue;
+                    if (!demandBefore.TryGetValue(ns.needId, out double prev) || ns.demanded <= prev + 0.001)
+                        continue;
+                    exercised++;
+                    TestAssert.GreaterThan(ns.Satisfaction, 0.999,
+                        "Need '" + ns.label + "' was fully met before upgrade; after the level-up rebuild "
+                        + "it must stay met (fulfilled rescaled to the higher demand), not show a false shortfall");
+                }
+
+                if (exercised == 0)
+                    TestAssert.Skip("Settlement has no per-level-scaled needs to exercise the rebuild");
+            }
+            finally
+            {
+                // Restore the settlement's original level regardless of assertion outcome.
+                int delta = originalLevel - s.settlementLevel;
+                if (delta != 0) s.UpgradeSettlement(delta);
+            }
+
+            DestructiveTestUtil.AssertEmpireInvariants(f, "RebuildNeedStates_AfterUpgrade");
+        }
+
         /// <summary>Sum of demanded amounts across every settlement's need-states for one resource
         /// (all categories — matches the resolver's per-resource fill-rate denominator).</summary>
         private static double SumNeedDemand(FactionFC f, ResourceTypeDef def)

@@ -72,12 +72,18 @@ namespace FactionColonies.SupplyChain
             FactionFC faction = FindFC.FactionComp;
             if (ws is null || faction is null) return;
 
-            // Preserve fulfilled values and surplus ratios from last tax resolution
-            Dictionary<string, double> prevFulfilled = new Dictionary<string, double>();
+            // Preserve the satisfaction ratio (not the absolute fulfilled amount) and surplus
+            // ratios from the last resolution. A rebuild can change `demanded` (an upgrade raises
+            // the per-level need, a worker change raises the per-worker need); rescaling fulfilled
+            // by the preserved ratio keeps a previously-met need shown as met, instead of pinning a
+            // now-too-small absolute amount against the higher demand and flashing a false shortfall
+            // (and its stat penalty) until the next daily resolution redraws.
+            Dictionary<string, double> prevSatisfaction = new Dictionary<string, double>();
             Dictionary<string, double> prevSurplusRatio = new Dictionary<string, double>();
             foreach(NeedState state in needStates)
             {
-                prevFulfilled[state.needId] = state.fulfilled;
+                if (state.demanded > 0)
+                    prevSatisfaction[state.needId] = state.fulfilled / state.demanded;
                 prevSurplusRatio[state.needId] = state.surplusRatio;
             }
 
@@ -90,9 +96,10 @@ namespace FactionColonies.SupplyChain
 
                 needDef.BuildNeedStates(ws, faction, 0.0, delegate(NeedState ns)
                 {
-                    prevFulfilled.TryGetValue(ns.needId, out double fulfilled);
+                    // Absent (brand-new need) => ratio 0 => unfulfilled until the first resolution.
+                    prevSatisfaction.TryGetValue(ns.needId, out double ratio);
                     prevSurplusRatio.TryGetValue(ns.needId, out double prevSurplus);
-                    ns.fulfilled = fulfilled;
+                    ns.fulfilled = ratio * ns.demanded;
                     ns.surplusRatio = prevSurplus;
                     newStates.Add(ns);
                 });
@@ -111,9 +118,9 @@ namespace FactionColonies.SupplyChain
                 foreach (NeedEntry entry in compNeeds)
                 {
                     if (entry.resource is null || entry.amount <= 0) continue;
-                    prevFulfilled.TryGetValue(entry.needId, out double fulfilled);
+                    prevSatisfaction.TryGetValue(entry.needId, out double ratio);
                     prevSurplusRatio.TryGetValue(entry.needId, out double prevSurplus);
-                    NeedState ns = new NeedState(entry.needId, entry.resource, entry.amount, fulfilled,
+                    NeedState ns = new NeedState(entry.needId, entry.resource, entry.amount, ratio * entry.amount,
                         entry.label, NeedCategory.Comp, entry.penalties,
                         entry.surplusBonuses, entry.maxSurplusRatio);
                     ns.surplusRatio = prevSurplus;
@@ -305,7 +312,7 @@ namespace FactionColonies.SupplyChain
                     // (a net reduction) and must render as a green negative; the other stats are
                     // raised directly and render as a green positive.
                     bool unrestStat = IsUnrestStat(bonus.stat);
-                    string line = TextUtil.AdditiveBonusLine(val, bonus.label ?? state.label,
+                    string line = TextUtil.AdditiveBonusLine(val, (bonus.label ?? state.label).CapitalizeFirst(),
                         invert: unrestStat, hardinvert: unrestStat);
                     desc = desc is null ? line : desc + "\n" + line;
                 }
