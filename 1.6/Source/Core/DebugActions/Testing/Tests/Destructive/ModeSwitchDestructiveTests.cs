@@ -60,5 +60,49 @@ namespace FactionColonies.SupplyChain
 
             DestructiveTestUtil.AssertEmpireInvariants(f, "SwitchSimpleToComplex");
         }
+
+        /* Guards the behaviour clause the mid-save-add fix depends on: a Simple -> Complex switch must
+           initialize a live local stockpile (with positive caps) for every settlement that already
+           existed before the switch. When the submod is added to an existing save, the freshly-created
+           WorldComponent runs this same switch from its registered PostLoadInit pass, and the existing
+           settlements must come out with usable per-settlement stockpiles rather than null wrappers. */
+        [EmpireDestructiveTest("SC.Destructive.Mode")]
+        public static void SwitchToComplex_InitializesLocalStockpilesForExistingSettlements()
+        {
+            FactionFC f = DestructiveTestUtil.RequireFaction();
+            WorldComponent_SupplyChain wc = SupplyChainCache.Comp;
+            if (wc is null) TestAssert.Skip("No SupplyChain world component");
+            if (f.settlements.Count == 0) TestAssert.Skip("Local stockpile init needs at least one settlement");
+
+            ResourceTypeDef r = null;
+            foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs)
+            {
+                if (def.isPoolResource) continue;
+                r = def; break;
+            }
+            if (r is null) TestAssert.Skip("No non-pool resource to check caps against");
+
+            SupplyChainMode original = wc.Mode;
+            try
+            {
+                // Force a fresh Simple -> Complex transition so the local wrappers are (re)built for
+                // every existing settlement, mirroring the reconciliation a mid-save-add triggers.
+                if (wc.Mode != SupplyChainMode.Simple) wc.SwitchMode(SupplyChainMode.Simple);
+                wc.SwitchMode(SupplyChainMode.Complex);
+
+                foreach (WorldSettlementFC s in f.settlements)
+                {
+                    IStockpile sp = SupplyChainCache.GetSettlementComp(s)?.GetStockpile();
+                    TestAssert.IsNotNull(sp, "Every existing settlement gets a live local stockpile in Complex mode");
+                    TestAssert.GreaterThan(sp.GetCap(r), 0.0, "Local caps are initialized (positive) after the switch");
+                }
+            }
+            finally
+            {
+                if (wc.Mode != original) wc.SwitchMode(original); // restore the player's mode
+            }
+
+            DestructiveTestUtil.AssertEmpireInvariants(f, "SwitchToComplex_InitializesLocalStockpiles");
+        }
     }
 }

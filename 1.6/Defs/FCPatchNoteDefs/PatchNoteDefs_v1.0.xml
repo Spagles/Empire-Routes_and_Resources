@@ -83,4 +83,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_1_0_6</defName>
+		<label>Mid-save Fix</label>
+		<description>Fixes a bug with adding Routes &amp; Resources to an onging save.</description>
+		<releaseDate>2026-07-29</releaseDate>
+		<patchNoteType>Hotfix</patchNoteType>
+		<patchNoteLines>
+		<li>Bugfix: when Routes &amp; Resources is added to a game mid-save, it doesn&apos;t respect the mode setting and defaults to simple mode</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

@@ -134,6 +134,13 @@ namespace FactionColonies.SupplyChain
                 SwitchMode(SupplyChainSettings.mode);
             }
 
+            // Handle adding Routes & Resources mid-save
+            if (fromLoad && !loadedFromSave && Scribe.mode == LoadSaveMode.LoadingVars)
+            {
+                LogSC.MessageForce("Detected mid-save add (component not in save). Registering for PostLoadInit reconciliation.");
+                Scribe.loader.initer.RegisterForPostLoadInit(this);
+            }
+
             // Warm up local stockpile wrappers / faction caps, the transient trade-network partner
             // sets, and the delivery caravans. This call covers the new-game path; on load these are
             // no-ops here because the settlement/route cross-refs aren't resolved until after
@@ -153,6 +160,11 @@ namespace FactionColonies.SupplyChain
         private bool firstTick = true;
         private BuildingFilter filterStockpileCap;
         private BuildingFilter filterBuildingNeeds;
+
+        // True when THIS component was present in the save (its ExposeData ran during LoadingVars).
+        // A component freshly added to an existing save leaves this false; that's how FinalizeInit
+        // detects a mid-save-add. Transient — never scribed.
+        private bool loadedFromSave;
 
         private void RegisterWithRegistries()
         {
@@ -314,6 +326,13 @@ namespace FactionColonies.SupplyChain
         public override void ExposeData()
         {
             base.ExposeData();
+
+            // Presence in the save is signalled by reaching ExposeData during LoadingVars. Record it so
+            // FinalizeInit can tell a loaded component from one freshly added to an existing save (which
+            // never gets a LoadingVars pass) and avoid double-registering it for PostLoadInit.
+            if (Scribe.mode == LoadSaveMode.LoadingVars)
+                loadedFromSave = true;
+
             Scribe_Values.Look(ref mode, "mode", SupplyChainMode.Simple);
             Scribe_Collections.Look(ref factionStockpile, "factionStockpile", LookMode.Def, LookMode.Value);
             Scribe_Collections.Look(ref factionCaps, "factionCaps", LookMode.Def, LookMode.Value);
