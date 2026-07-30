@@ -512,10 +512,14 @@ namespace FactionColonies.SupplyChain
 
         /// <summary>
         /// Per-day deposit callback fired by the base mod for each registered allocation, with
-        /// (requested, actual) where actual = min(allocation, that day's production). Deposits
-        /// <paramref name="actual"/> into the target stockpile (Simple: faction; Complex: local),
-        /// auto-sells any over-cap overflow, and tracks sustained shortfall. The base mod never
-        /// evicts — a persistently unfillable manual allocation self-reduces here (owner-initiated).
+        /// (requested, actual) where actual = min(allocation, that day's production). Deposits the
+        /// full <paramref name="actual"/> into the target stockpile (Simple: faction; Complex: local)
+        /// WITHOUT clamping to cap, and tracks sustained shortfall. Selling is deferred: the daily
+        /// consume pass feeds needs/routes from the deposited production first, then sweeps whatever
+        /// storage still cannot hold to silver (produce -> consume -> sell only true surplus).
+        /// Depositing over-cap here is what lets today's production cover today's routes/needs instead
+        /// of being liquidated before consumption ever runs. The base mod never evicts — a persistently
+        /// unfillable manual allocation self-reduces here (owner-initiated).
         /// </summary>
         public void Realize(ResourceTypeDef def, double requested, double actual)
         {
@@ -524,21 +528,13 @@ namespace FactionColonies.SupplyChain
             if (actual > 0)
             {
                 WorldComponent_SupplyChain wc = SupplyChainCache.Comp;
-                double excess;
                 if (wc != null && wc.Mode == SupplyChainMode.Simple)
                 {
-                    excess = wc.CreditFaction(def, actual);
+                    wc.AddToFactionStockpile(def, actual);
                 }
                 else
                 {
-                    excess = EnsureLocalStockpile().Credit(def, actual);
-                }
-
-                // Daily overflow auto-sell (pool resources cap silently — no auto-sell)
-                if (excess > 0 && !def.isPoolResource)
-                {
-                    float silver = FormulaUtil.OverflowSilver(excess);
-                    WorldSettlement?.AddOneTimeSilverIncome(silver);
+                    EnsureLocalStockpile().Add(def, actual);
                 }
             }
 

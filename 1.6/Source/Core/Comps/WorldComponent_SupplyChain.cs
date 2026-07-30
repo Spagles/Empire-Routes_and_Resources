@@ -688,7 +688,8 @@ namespace FactionColonies.SupplyChain
                     if (amount > 0)
                     {
                         // A settlement can receive more of a resource than its local cap holds; sell the
-                        // over-cap remainder as silver instead of dropping it (matches Realize's daily overflow).
+                        // over-cap remainder as silver instead of dropping it (one-time reconciliation of
+                        // the redistributed faction pile, at the same overflow penalty as the daily sweep).
                         double excess = comp.GetStockpile().Credit(kv.Key, amount);
                         if (excess > 0 && !kv.Key.isPoolResource)
                             settlement.AddOneTimeSilverIncome(FormulaUtil.OverflowSilver(excess));
@@ -795,7 +796,9 @@ namespace FactionColonies.SupplyChain
                 GetComp(settlement)?.RecalculateLocalCapsIfDirty();
             }
 
-            // 6. PER-SETTLEMENT OVERFLOW (anything over cap after route transfers)
+            // 6. PER-SETTLEMENT OVERFLOW cap-safety net. The daily consume pass already sweeps true
+            //    surplus after routes/needs; this catches any residual over-cap (e.g. a capacity
+            //    reduction between daily runs) so the tax tick still lands stockpiles at cap.
             foreach (WorldSettlementFC settlement in faction.settlements)
             {
                 WorldObjectComp_SupplyChain comp = GetComp(settlement);
@@ -804,24 +807,9 @@ namespace FactionColonies.SupplyChain
                 IStockpile localStockpile = comp.GetStockpile();
                 if (localStockpile is null) continue;
 
-                foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs)
-                {
-                    if (def.isPoolResource) continue;
-
-                    double amount = localStockpile.GetAmount(def);
-                    double cap = localStockpile.GetCap(def);
-                    if (amount > cap && cap > 0)
-                    {
-                        double excess = amount - cap;
-                        localStockpile.TryDraw(def, excess, out double drawn);
-
-                        if (drawn > 0)
-                        {
-                            float silver = FormulaUtil.OverflowSilver(drawn);
-                            settlement.AddOneTimeSilverIncome(silver);
-                        }
-                    }
-                }
+                float silver = SweepOverflow(localStockpile);
+                if (silver > 0)
+                    settlement.AddOneTimeSilverIncome(silver);
             }
 
             // 7. PER-SETTLEMENT SELL ORDERS
@@ -844,6 +832,36 @@ namespace FactionColonies.SupplyChain
                 }
             }
             capsAndStockpilesDirty = false;
+        }
+
+        /// <summary>
+        /// Clamps every resource a stockpile holds back to its cap and returns the total silver
+        /// generated. This is the "sell only true surplus" step of produce -> consume -> sell: run it
+        /// AFTER the daily consume pass so routes and needs draw from the day's production first and only
+        /// genuinely unstorable surplus is reconciled. Also doubles as a cap-safety net for capacity
+        /// reductions. Non-pool overflow sells at the overflow penalty; pool resources (power/research)
+        /// have no silver value, so their overflow is dropped silently — but they are still clamped like
+        /// every other resource, or an auto-maxed pool allocation would accumulate over cap forever.
+        /// Internal (not private) so the daily-accrual regression tests can drive it directly.
+        /// </summary>
+        internal float SweepOverflow(IStockpile sp)
+        {
+            if (sp is null) return 0f;
+
+            float total = 0f;
+            foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs)
+            {
+                double amount = sp.GetAmount(def);
+                double cap = sp.GetCap(def);
+                if (amount > cap && cap > 0)
+                {
+                    double excess = amount - cap;
+                    sp.TryDraw(def, excess, out double drawn);
+                    if (drawn > 0 && !def.isPoolResource)
+                        total += FormulaUtil.OverflowSilver(drawn);
+                }
+            }
+            return total;
         }
 
         public void PostTaxResolution(FactionFC faction)
@@ -870,10 +888,12 @@ namespace FactionColonies.SupplyChain
 
         /// <summary>
         /// Runs once per day after every settlement has accrued the day's production and the
-        /// per-allocation realize() deposits have landed (produce-then-consume). Consumes from the
-        /// now-filled stockpile: settlement/comp needs (proportional), per-building dormancy
-        /// (all-or-nothing), and tithe injection — then re-syncs auto-max so tomorrow's deposit
-        /// tracks today's production rate (the one-day predictive lag matching dormancy/tithe).
+        /// per-allocation realize() deposits have landed uncapped (produce-then-consume). Consumes from
+        /// the now-filled stockpile: settlement/comp needs (proportional), per-building dormancy
+        /// (all-or-nothing), and tithe injection; then sells only the true surplus (whatever storage
+        /// still cannot hold after consumption) at the overflow penalty; then re-syncs auto-max so
+        /// tomorrow's deposit tracks today's production rate (the one-day predictive lag matching
+        /// dormancy/tithe).
         /// </summary>
         public void PostDailyAccrual(FactionFC faction)
         {
@@ -903,7 +923,14 @@ namespace FactionColonies.SupplyChain
             foreach (WorldSettlementFC settlement in faction.settlements)
                 GetComp(settlement)?.ResolveTitheInjections(stockpile);
 
-            // 4. Re-sync auto-max allocations to current production for tomorrow's deposit.
+            // 4. Sell only the true surplus: after needs/dormancy/tithe have drawn from the day's
+            //    production, liquidate whatever the shared pile still cannot store. Silver is shared
+            //    evenly since the pool has no per-settlement attribution.
+            float overflowSilver = SweepOverflow(stockpile);
+            if (overflowSilver > 0)
+                DistributeSilverEvenly(overflowSilver, faction);
+
+            // 5. Re-sync auto-max allocations to current production for tomorrow's deposit.
             foreach (WorldSettlementFC settlement in faction.settlements)
                 GetComp(settlement)?.SyncAllAutoMaxAllocations();
 
@@ -912,9 +939,10 @@ namespace FactionColonies.SupplyChain
 
         private void DailyConsume_Complex(FactionFC faction)
         {
-            // Route movement is now daily. Refresh caps first (route dispatch/arrival and needs all
-            // draw from capped local stockpiles), then land arrivals, then dispatch due routes, so
-            // goods that arrive today can satisfy today's needs.
+            // Route movement is now daily. The day's production has already been deposited (uncapped)
+            // into each source stockpile, so routes and needs draw from it before the end-of-pass
+            // overflow sweep sells whatever storage still cannot hold. Refresh caps first, then land
+            // arrivals, then dispatch due routes, so goods that arrive today can satisfy today's needs.
             foreach (WorldSettlementFC settlement in faction.settlements)
                 GetComp(settlement)?.RecalculateLocalCapsIfDirty();
 
@@ -941,7 +969,13 @@ namespace FactionColonies.SupplyChain
                 // 3. Tithe injection (per-day draw).
                 dataComp.ResolveTitheInjections(local);
 
-                // 4. Re-sync auto-max allocations for tomorrow's deposit.
+                // 4. Sell only the true surplus: after this settlement's routes/needs/dormancy/tithe
+                //    have drawn from the day's production, liquidate whatever storage still cannot hold.
+                float overflowSilver = SweepOverflow(local);
+                if (overflowSilver > 0)
+                    settlement.AddOneTimeSilverIncome(overflowSilver);
+
+                // 5. Re-sync auto-max allocations for tomorrow's deposit.
                 dataComp.SyncAllAutoMaxAllocations();
             }
             DirtyFlowCache();
@@ -1245,6 +1279,19 @@ namespace FactionColonies.SupplyChain
             if (def is null || amount <= 0) return 0;
             EnsureCapsAndStockpiles();
             return stockpile != null ? stockpile.Credit(def, amount) : amount;
+        }
+
+        /// <summary>
+        /// Uncapped deposit into the shared faction stockpile (Simple mode). Mirrors the local-stockpile
+        /// <see cref="IStockpile.Add"/> path used by the produce-then-consume deposit: the day's production
+        /// lands in full (possibly over cap) so needs can draw from it before the daily overflow sweep
+        /// liquidates whatever storage still cannot hold.
+        /// </summary>
+        public void AddToFactionStockpile(ResourceTypeDef def, double amount)
+        {
+            if (def is null || amount <= 0) return;
+            EnsureCapsAndStockpiles();
+            stockpile?.Add(def, amount);
         }
 
         private void DistributeSilverEvenly(float silver, FactionFC faction)

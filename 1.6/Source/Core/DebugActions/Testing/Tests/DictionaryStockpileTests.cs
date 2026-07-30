@@ -142,6 +142,44 @@ namespace FactionColonies.SupplyChain
             TestAssert.AreEqual(5.0, sp.GetAmount(r), 0.001, "Negative credit must not change the amount");
         }
 
+        /*-*-*- Add (uncapped deposit) -*-*-*/
+
+        [EmpireTest("SC.Stockpile")]
+        public static void Add_ExceedsCap_DepositsOverCapWithoutClamping()
+        {
+            // The produce-then-consume deposit path: Add ignores the cap so the day's production can
+            // land in full and be reconciled later by the overflow sweep. Contrast Credit, which clamps.
+            ResourceTypeDef r = Res();
+            DictionaryStockpile sp = SCTestHelper.MakeStockpile(r, 90.0, 100.0);
+
+            sp.Add(r, 30.0);
+
+            TestAssert.AreEqual(120.0, sp.GetAmount(r), 0.001, "Add must deposit the full amount even past the cap");
+        }
+
+        [EmpireTest("SC.Stockpile")]
+        public static void Add_MissingResource_StartsFromZero()
+        {
+            ResourceTypeDef r = Res();
+            DictionaryStockpile sp = SCTestHelper.MakeEmptyStockpile();
+
+            sp.Add(r, 15.0);
+
+            TestAssert.AreEqual(15.0, sp.GetAmount(r), 0.001, "Add to a missing key seeds it from zero");
+        }
+
+        [EmpireTest("SC.Stockpile")]
+        public static void Add_ZeroOrNegative_NoOp()
+        {
+            ResourceTypeDef r = Res();
+            DictionaryStockpile sp = SCTestHelper.MakeStockpile(r, 5.0, 100.0);
+
+            sp.Add(r, 0.0);
+            sp.Add(r, -5.0);
+
+            TestAssert.AreEqual(5.0, sp.GetAmount(r), 0.001, "Non-positive Add must not change the amount");
+        }
+
         /*-*-*- GetAmount / GetCap defaults -*-*-*/
 
         [EmpireTest("SC.Stockpile")]

@@ -69,4 +69,18 @@
 		<li>Matathias</li>
 		</authors>
 	</FactionColonies.PatchNoteDef>
+
+	<FactionColonies.PatchNoteDef ParentName="SCPatchBase">
+		<defName>SC_1_0_5</defName>
+		<label>Stockpile Handling Fix</label>
+		<description>Fixes an issue with how stockpiles and surpluses were handled. Each day, production is accumulated into the stockpile, and then everything that needs the resource is drawn from said stockpile. However, the stockpile&apos;s cap was hard-applied throughout the whole process, rather than at the end; so over-production would immediately be sold off, and then needs and routes would drain from the cap instead of the full total. Now, the cap is only applied at the end.</description>
+		<releaseDate>2026-07-29</releaseDate>
+		<patchNoteType>Patch</patchNoteType>
+		<patchNoteLines>
+		<li>Only apply stockpile caps at the end of the daily processing</li>
+		</patchNoteLines>
+		<authors>
+		<li>Matathias</li>
+		</authors>
+	</FactionColonies.PatchNoteDef>
 </Defs>

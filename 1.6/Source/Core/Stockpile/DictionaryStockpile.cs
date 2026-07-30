@@ -59,5 +59,16 @@ namespace FactionColonies.SupplyChain
 
             return amount - credited; // excess
         }
+
+        public void Add(ResourceTypeDef resource, double amount)
+        {
+            if (amount <= 0)
+                return;
+
+            if (!stockpile.TryGetValue(resource, out double current))
+                current = 0.0;
+
+            stockpile[resource] = current + amount; // no cap enforcement; reconciled by the daily overflow sweep
+        }
     }
 }

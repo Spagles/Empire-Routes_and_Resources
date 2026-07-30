@@ -23,5 +23,13 @@ namespace FactionColonies.SupplyChain
         /// Returns the excess that did not fit (0 if everything fit).
         /// </summary>
         double Credit(ResourceTypeDef resource, double amount);
+
+        /// <summary>
+        /// Add units to the stockpile WITHOUT enforcing the cap — the amount may temporarily exceed
+        /// the cap. Callers are responsible for reconciling the over-cap surplus later (the daily
+        /// consume pass draws needs/routes first, then sweeps whatever storage still cannot hold).
+        /// Used only for the produce-then-consume deposit path; every other deposit uses <see cref="Credit"/>.
+        /// </summary>
+        void Add(ResourceTypeDef resource, double amount);
     }
 }

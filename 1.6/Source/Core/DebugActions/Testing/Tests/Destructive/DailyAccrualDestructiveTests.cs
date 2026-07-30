@@ -50,16 +50,18 @@ namespace FactionColonies.SupplyChain
         }
 
         [EmpireDestructiveTest("SC.Destructive.Daily")]
-        public static void Realize_OverCap_ClampsLocalStockpile()
+        public static void Realize_OverCap_DepositsUncapped()
         {
-            // A7: the daily realize deposit must never push a stockpile past its cap — the over-cap
-            // remainder is auto-sold to silver, and the stockpile lands exactly at the cap. Tested in
-            // Complex mode where each settlement has a bounded local cap we can read back.
+            // The daily realize deposit lands the FULL day's production even past the cap
+            // (produce-then-consume): the over-cap surplus is reconciled later by the daily overflow
+            // sweep, NOT clamped or sold at deposit time. This is what lets today's production cover
+            // today's routes/needs instead of being liquidated before consumption runs. Tested in
+            // Complex mode where the per-settlement local cap is observable.
             FactionFC f = DestructiveTestUtil.RequireFaction();
             WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
             if (comp is null) TestAssert.Skip("No SupplyChain world component");
             if (comp.Mode != SupplyChainMode.Complex)
-                TestAssert.Skip("Over-cap clamp is only observable on a per-settlement local stockpile (Complex mode)");
+                TestAssert.Skip("Uncapped deposit is only observable on a per-settlement local stockpile (Complex mode)");
 
             WorldSettlementFC s = SCDestructiveTestUtil.FirstOrTransient(f);
             if (s is null) TestAssert.Skip("No settlement available");
@@ -67,21 +69,103 @@ namespace FactionColonies.SupplyChain
             if (sc is null) TestAssert.Skip("No settlement comp");
 
             ResourceTypeDef r = null;
-            foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs) { r = def; break; }
-            if (r is null) TestAssert.Skip("No resource defs");
+            foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs) { if (!def.isPoolResource) { r = def; break; } }
+            if (r is null) TestAssert.Skip("No non-pool resource defs");
 
             IStockpile sp = sc.EnsureLocalStockpile();
             double cap = sp.GetCap(r);
             if (cap <= 0) TestAssert.Skip("Resource " + r.defName + " has no local cap headroom to test");
 
-            // Depositing far more than the cap must clamp to exactly the cap, never overflow it.
+            double before = sp.GetAmount(r);
+
+            // Depositing far more than the cap must land in full (uncapped), not clamp to the cap.
             sc.Realize(r, cap * 2.0, cap * 2.0);
 
-            TestAssert.LessThanOrEqual(sp.GetAmount(r), cap + 0.001, "Realize must not push the stockpile past its cap");
-            TestAssert.GreaterThan(sp.GetAmount(r), cap - 0.001, "An over-cap deposit should fill the stockpile to exactly the cap");
+            TestAssert.AreEqual(before + cap * 2.0, sp.GetAmount(r), 0.001,
+                "Realize must deposit the full amount uncapped (surplus is swept after consumption, not clamped at deposit)");
+
+            // Restore a <= cap state so we don't leave this settlement massively over-cap for later tests.
+            comp.SweepOverflow(sp);
 
             SCDestructiveTestUtil.AssertStockpilesNonNegative(f, comp, "Realize_OverCap");
             DestructiveTestUtil.AssertEmpireInvariants(f, "Realize_OverCap");
+        }
+
+        [EmpireDestructiveTest("SC.Destructive.Daily")]
+        public static void Realize_ThenConsume_ThenSweep_RetainsFullStockpile()
+        {
+            // Regression for the player report: a net-positive producer (produces more than it consumes
+            // + routes out) must KEEP a full stockpile across a daily cycle and sell only the genuine
+            // surplus — NOT sell all its production as overflow and then empty out. Exercises the real
+            // ordering: deposit uncapped (Realize) -> consume (routes/needs) -> sweep true surplus.
+            FactionFC f = DestructiveTestUtil.RequireFaction();
+            WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
+            if (comp is null) TestAssert.Skip("No SupplyChain world component");
+            if (comp.Mode != SupplyChainMode.Complex)
+                TestAssert.Skip("Local per-settlement stockpile is only observable in Complex mode");
+
+            WorldSettlementFC s = SCDestructiveTestUtil.FirstOrTransient(f);
+            if (s is null) TestAssert.Skip("No settlement available");
+            WorldObjectComp_SupplyChain sc = SupplyChainCache.GetSettlementComp(s);
+            if (sc is null) TestAssert.Skip("No settlement comp");
+
+            ResourceTypeDef r = null;
+            foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs) { if (!def.isPoolResource) { r = def; break; } }
+            if (r is null) TestAssert.Skip("No non-pool resource defs");
+
+            IStockpile sp = sc.EnsureLocalStockpile();
+            double cap = sp.GetCap(r);
+            if (cap <= 0) TestAssert.Skip("Resource " + r.defName + " has no local cap headroom to test");
+
+            // Precondition: stockpile starts full (mirrors "bought a full stockpile with silver").
+            sp.TryDraw(r, sp.GetAmount(r), out _);
+            sp.Add(r, cap);
+            TestAssert.AreEqual(cap, sp.GetAmount(r), 0.001, "precondition: stockpile starts full");
+
+            // Produce a large batch — auto-max deposits the full day's production, uncapped.
+            double production = cap * 1.2;
+            sc.Realize(r, production, production);
+            TestAssert.GreaterThan(sp.GetAmount(r), cap,
+                "deposit must land uncapped so consumption can draw from the day's production");
+
+            // Consume less than we produced (routes out + needs), staying net-positive on the day.
+            double consumed = production * 0.8;
+            sp.TryDraw(r, consumed, out _);
+
+            // Sell only what storage still cannot hold, after consumption.
+            float silver = comp.SweepOverflow(sp);
+
+            TestAssert.AreEqual(cap, sp.GetAmount(r), 0.5,
+                "a net-positive settlement must END the day with a FULL stockpile, not empty");
+            TestAssert.GreaterThan(silver, 0f, "only the genuine over-cap surplus is sold to silver");
+
+            SCDestructiveTestUtil.AssertStockpilesNonNegative(f, comp, "Realize_ThenConsume_ThenSweep");
+            DestructiveTestUtil.AssertEmpireInvariants(f, "Realize_ThenConsume_ThenSweep");
+        }
+
+        [EmpireDestructiveTest("SC.Destructive.Daily")]
+        public static void SweepOverflow_PoolResource_ClampedButNotSold()
+        {
+            // Pool resources (power/research) can be diverted into a stockpile and auto-maxed, so the
+            // daily sweep MUST clamp them to cap like any other resource — otherwise, now that the deposit
+            // is uncapped, an auto-maxed pool allocation would accumulate over cap forever. But pool
+            // resources have no silver value, so their over-cap surplus is dropped, never auto-sold.
+            WorldComponent_SupplyChain comp = SupplyChainCache.Comp;
+            if (comp is null) TestAssert.Skip("No SupplyChain world component");
+
+            ResourceTypeDef pool = null;
+            foreach (ResourceTypeDef def in SupplyChainCache.AllResourceTypeDefs) { if (def.isPoolResource) { pool = def; break; } }
+            if (pool is null) TestAssert.Skip("No pool resource types defined");
+
+            // A throwaway stockpile holding ONLY the pool resource, seeded to twice its cap. Every other
+            // resource reads amount/cap 0 and is skipped, so the returned silver isolates the pool.
+            const double cap = 50.0;
+            DictionaryStockpile sp = SCTestHelper.MakeStockpile(pool, cap * 2.0, cap);
+
+            float silver = comp.SweepOverflow(sp);
+
+            TestAssert.AreEqual(cap, sp.GetAmount(pool), 0.001, "the sweep must clamp a pool resource to its cap");
+            TestAssert.AreEqual(0.0, silver, 0.001, "pool overflow has no silver value and must not be auto-sold");
         }
 
         [EmpireDestructiveTest("SC.Destructive.Daily")]
